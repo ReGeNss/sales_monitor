@@ -1,4 +1,4 @@
-package scrapers
+package atb
 
 import (
 	"log"

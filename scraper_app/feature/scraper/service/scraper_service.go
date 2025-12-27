@@ -44,7 +44,8 @@ func (s *scraperServiceImpl) Scrape() {
 	for _, scraperConfig := range s.scrapers {
 		for _, url := range scraperConfig.URLs {
 			log.Printf("scraping %s", url)
-			scraperConfig.Scraper(browser, url)
+			products := scraperConfig.Scraper(browser, url)
+			log.Printf("found %d products", len(products))
 		}
 	}
 	pw.Stop()
