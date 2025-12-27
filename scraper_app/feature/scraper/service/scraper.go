@@ -5,7 +5,7 @@ import (
 	"sales_monitor/scraper/shared/product/domain/entity"
 )
 
-type Scraper func(context playwright.Browser, url string) []entity.Product
+type Scraper func(context playwright.Browser, url string) []*entity.Product
 
 type ScraperConfig struct {
 	URLs []string

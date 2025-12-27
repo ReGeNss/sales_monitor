@@ -9,7 +9,7 @@ func main() {
 	scraperService := scraper.NewScraperService(
 		[]scraper.ScraperConfig{
 			{
-				URLs: []string{"https://www.atbmarket.com/catalog/cipsi"},
+				URLs: []string{"https://www.atbmarket.com/promo/economy"},
 				Scraper: scrapers.AtbScraper,
 			},
 		},
