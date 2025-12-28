@@ -2,7 +2,7 @@ package scraper
 
 import (
 	"log"
-	"sales_monitor/scraper/shared/product/service"
+	"sales_monitor/scraper_app/shared/product/service"
 	"github.com/playwright-community/playwright-go"
 )
 

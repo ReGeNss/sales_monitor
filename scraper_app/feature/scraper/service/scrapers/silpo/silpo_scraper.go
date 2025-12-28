@@ -2,7 +2,7 @@ package silpo
 
 import (
 	"log"
-	"sales_monitor/scraper/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
 	"time"
 	"github.com/playwright-community/playwright-go"

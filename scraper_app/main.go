@@ -1,10 +1,10 @@
 package main
 
 import (
-	scraper "sales_monitor/scraper/feature/scraper/service"
-	"sales_monitor/scraper/feature/scraper/service/scrapers/atb"
-	"sales_monitor/scraper/feature/scraper/service/scrapers/fora"
-	"sales_monitor/scraper/feature/scraper/service/scrapers/silpo"
+	scraper "sales_monitor/scraper_app/feature/scraper/service"
+	"sales_monitor/scraper_app/feature/scraper/service/scrapers/atb"
+	"sales_monitor/scraper_app/feature/scraper/service/scrapers/fora"
+	"sales_monitor/scraper_app/feature/scraper/service/scrapers/silpo"
 )
 
 func main() {

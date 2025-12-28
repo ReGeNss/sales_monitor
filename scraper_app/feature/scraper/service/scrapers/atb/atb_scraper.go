@@ -5,7 +5,7 @@ import (
 	"log"
 	"math"
 	"regexp"
-	"sales_monitor/scraper/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strconv"
 	"strings"
 	"github.com/playwright-community/playwright-go"

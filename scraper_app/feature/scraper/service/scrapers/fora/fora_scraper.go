@@ -2,7 +2,7 @@ package fora
 
 import (
 	"log"
-	"sales_monitor/scraper/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
 	"github.com/playwright-community/playwright-go"
 )
