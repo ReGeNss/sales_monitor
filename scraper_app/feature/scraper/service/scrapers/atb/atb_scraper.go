@@ -1,9 +1,9 @@
 package atb
 
 import (
+	"fmt"
 	"log"
 	"math"
-	"fmt"
 	"regexp"
 	"sales_monitor/scraper/shared/product/domain/entity"
 	"strconv"
@@ -26,9 +26,8 @@ func AtbScraper(browser playwright.Browser, url string) []*entity.Product {
 	for i := 1; i < countOfAllPages; i++ {
 		products = append(products, getProducts(page)...)
 		page.Close()
-		
-		context, err := browser.NewContext()
-		page, err = context.NewPage()
+
+		page, err = browser.NewPage()
 		if err != nil {
 			log.Fatalf("could not create page: %v", err)
 		}
@@ -38,8 +37,8 @@ func AtbScraper(browser playwright.Browser, url string) []*entity.Product {
 	}
 
 	products = append(products, getProducts(page)...)
+	page.Close()
 	
-	log.Printf("products: %+v", len(products))
 	return products
 }
 
@@ -74,7 +73,6 @@ func getProducts(page playwright.Page) []*entity.Product {
 	if ok != nil {
 		log.Fatalf("could not get catalog items: %v", ok)
 	}
-
 
 	for _, item := range items {
 		pricesBloc := item.Locator(".catalog-item__bottom")
