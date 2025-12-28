@@ -1,2 +1,4 @@
-h1:WQ+HSubjsPs0vF6wCyekCuyx8qa4/U9PqXaljAx4qAU=
+h1:jc7wEE8Oc19Ja5r9OQOHNLueRqyZMAbGft7XhF26PHU=
 20251228141133_initial_schema.sql h1:czZsqH+BC0gDj0L9XV+9fuzXmB+6cQCxFo8HOyLK8uU=
+20251228210337_add_fingerprint_name_and_index_to_product.sql h1:oJqaY4k1roYmrmdnd0L7+EhvpvQpKrKOve+pLS1l+x8=
+20251228212014_add_not_null.sql h1:oQNqK2WzM6ISO8zKRKq9TZ26ugVZmO3Jmwqz0B3Y1gg=
