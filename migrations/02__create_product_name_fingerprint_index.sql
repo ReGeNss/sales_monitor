@@ -1,0 +1,1 @@
+CREATE INDEX idx_product_name_fingerprint ON Product (name_fingerprint);
