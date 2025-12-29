@@ -76,7 +76,7 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string) (uin
 	var product models.Product
 	err := p.db.Model(&models.Product{}).
 		Select("product_id").
-		Where("MATCH(name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0.9", fingerprint).
+		Where("MATCH(name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0.95", fingerprint).
 		Order(fmt.Sprintf("MATCH(name_fingerprint) AGAINST('%s' IN NATURAL LANGUAGE MODE) DESC", fingerprint)).
 		Limit(1).
 		First(&product).Error

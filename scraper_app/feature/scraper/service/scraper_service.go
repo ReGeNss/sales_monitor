@@ -12,13 +12,13 @@ type ScraperService interface {
 }
 
 type scraperServiceImpl struct {
-	scrapers       []ScraperConfig
+	configuration       []ScraperConfig
 	productService service.ProductService
 }
 
-func NewScraperService(scrapers []ScraperConfig, productService service.ProductService) ScraperService {
+func NewScraperService(configuration []ScraperConfig, productService service.ProductService) ScraperService {
 	return &scraperServiceImpl{
-		scrapers:       scrapers,
+		configuration:       configuration,
 		productService: productService,
 	}
 }
@@ -42,13 +42,14 @@ func (s *scraperServiceImpl) Scrape() ([]*entity.ScrapedProducts, error) {
 		log.Fatalf("could not launch browser: %v", err)
 	}
 
-	for _, scraperConfig := range s.scrapers {
-		for _, url := range scraperConfig.URLs {
-			log.Printf("scraping %s", url)
-			products := scraperConfig.Scraper(browser, url)
+	for _, scraperConfig := range s.configuration {
+		for _, scrapingContent := range scraperConfig.ScrapingContent {
+			log.Printf("scraping %s", scrapingContent.URL)
+			products := scraperConfig.Scraper(browser, scrapingContent.URL)
 			scrapedProducts = append(scrapedProducts, &entity.ScrapedProducts{
 				Products: products,
 				MarketplaceName: scraperConfig.MarketplaceName,
+				Category: scrapingContent.Category,
 			})
 			log.Printf("found %d products", len(products))
 		}
