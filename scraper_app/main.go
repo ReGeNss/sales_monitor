@@ -5,8 +5,8 @@ import (
 	"sales_monitor/internal/db"
 	scraper "sales_monitor/scraper_app/feature/scraper/service"
 	// "sales_monitor/scraper_app/feature/scraper/service/scrapers/atb"
-	// "sales_monitor/scraper_app/feature/scraper/service/scrapers/fora"
-	"sales_monitor/scraper_app/feature/scraper/service/scrapers/silpo"
+	"sales_monitor/scraper_app/feature/scraper/service/scrapers/fora"
+	// "sales_monitor/scraper_app/feature/scraper/service/scrapers/silpo"
 	"sales_monitor/scraper_app/shared/product/data/repository"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
@@ -28,14 +28,14 @@ func main() {
 			// 	URLs:    []string{"https://www.atbmarket.com/catalog/294-napoi-bezalkogol-ni"},
 			// 	Scraper: atb.AtbScraper,
 			// },
-			// {
-			// 	URLs:    []string{"https://fora.ua/category/chypsy-2735"},
-			// 	Scraper: fora.ForaScraper,
-			// },
 			{
-				URLs:    []string{"https://silpo.ua/category/kartopliani-chypsy-5021/f/brand=lyuks"},
-				Scraper: silpo.SilpoScraper,
+				URLs:    []string{"https://fora.ua/category/chypsy-2735"},
+				Scraper: fora.ForaScraper,
 			},
+			// {
+			// 	URLs:    []string{"https://silpo.ua/category/kartopliani-chypsy-5021/f/brand=lyuks"},
+			// 	Scraper: silpo.SilpoScraper,
+			// },
 		},
 		nil,
 	)

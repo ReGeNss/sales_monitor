@@ -4,7 +4,6 @@ import (
 	"log"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
-
 	"github.com/playwright-community/playwright-go"
 )
 
@@ -33,8 +32,26 @@ func ForaScraper(browser playwright.Browser, url string) []*entity.ScrapedProduc
 
 	products := getProducts(page)
 
-	return products
+	productsWithBrand := []*entity.ScrapedProduct{}
+	for _, product := range products {
+		page, err = browser.NewPage()
+		if err != nil {
+			log.Fatalf("could not create page: %v", err)
+		}
 
+		page.Goto(product.URL)
+		page.WaitForLoadState()
+
+		product, err = getProductBrand(page, product)
+		if err != nil {
+			log.Printf("could not get product brand: %v", err)
+			continue
+		}
+		productsWithBrand = append(productsWithBrand, product)
+		page.Close()
+	}
+
+	return productsWithBrand
 }
 
 func getProducts(page playwright.Page) []*entity.ScrapedProduct {
@@ -96,16 +113,47 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 			imgSrc = ""
 		}
 
+		productLink, err := item.Locator(".image-content-wrapper").GetAttribute("href")
+		if err != nil {
+			log.Printf("could not get product link: %v", err)
+		}
+
 		product := entity.NewScrapedProduct(
 			strings.TrimSpace(title),
 			currentPrice,
 			oldPrice,
 			imgSrc,
-			"",
+			"https://fora.ua"+productLink,
 		)
 
 		products = append(products, product)
 	}
 
 	return products
+}
+
+func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
+	descriptions, err := page.Locator(".product-details-column.trademark").All()
+	
+	if err != nil {
+		log.Printf("could not get descriptions: %v", err)
+		return nil, err
+	}
+
+	for _, description := range descriptions {
+		descriptionLabel, err := description.Locator(".product-details-label").TextContent()
+		if err != nil {
+			log.Printf("could not get description label: %v", err)
+			continue
+		}
+		if strings.TrimSpace(descriptionLabel) == "Торгова марка" {
+			descriptionValue, err := description.Locator(".product-details-value").TextContent()
+			if err != nil {
+				return nil, err
+			}
+			product.BrandName = strings.TrimSpace(descriptionValue)
+			return product, nil
+		}
+	}
+	return nil, err
 }
