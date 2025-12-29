@@ -8,7 +8,6 @@ import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strconv"
 	"strings"
-
 	"github.com/playwright-community/playwright-go"
 )
 
@@ -36,11 +35,30 @@ func AtbScraper(browser playwright.Browser, url string) []*entity.ScrapedProduct
 		page.Goto(url)
 		page.WaitForLoadState()
 	}
-
+	
 	products = append(products, getProducts(page)...)
 	page.Close()
 
-	return products
+	productsWithBrand := []*entity.ScrapedProduct{}
+	for _, product := range products {
+		page, err = browser.NewPage()
+		if err != nil {
+			log.Fatalf("could not create page: %v", err)
+		}
+
+		page.Goto(product.URL)
+		page.WaitForLoadState()
+
+		product, err = getProductBrand(page, product)
+		if err != nil {
+			log.Printf("could not get product brand: %v", err)
+			continue
+		}
+		productsWithBrand = append(productsWithBrand, product)
+		page.Close()
+	}
+
+	return productsWithBrand
 }
 
 func getCountOfAllPages(page playwright.Page) int {
@@ -109,11 +127,17 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 			imgSrc = ""
 		}
 
+		productLink, err := item.Locator(".catalog-item__photo-link").GetAttribute("href")
+		if err != nil {
+			log.Printf("could not get product link: %v", err)
+		}
+
 		product := entity.NewScrapedProduct(
 			strings.TrimSpace(title),
 			currentPrice,
 			oldPrice,
 			imgSrc,
+			"https://www.atbmarket.com" + productLink,
 		)
 
 		products = append(products, product)
@@ -121,4 +145,26 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 	}
 
 	return products
+}
+
+
+func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
+	brandElement, err := page.Locator(".product-characteristics__item").All()
+	if err != nil {
+		log.Printf("could not get brand: %v", err)
+		return nil, err
+	}
+	for _, item := range brandElement {
+		elementTitle, err := item.Locator(".product-characteristics__name").InnerText()
+		if err == nil && elementTitle == "Торгова марка" {
+			brandName, err := item.Locator(".product-characteristics__value").InnerText()
+			if err != nil {
+				log.Printf("could not get brand name: %v", err)
+				return nil, err
+			}
+			product.BrandName = brandName
+			break
+		}
+	}
+	return product, nil
 }
