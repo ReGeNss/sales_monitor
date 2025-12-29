@@ -1,8 +1,11 @@
 package models
 
 type Brand struct {
-    ID        uint      `gorm:"primaryKey;column:brand_id"`
-    Name      string    `gorm:"not null;unique"`
-    BannerURL string    `gorm:"column:banner_url"`
-    Products  []Product `gorm:"foreignKey:BrandID"`
+	BrandID   int    `gorm:"primaryKey;column:brand_id;autoIncrement"`
+	Name      string `gorm:"unique;notNull;column:name;type:varchar(255)"`
+	BannerURL string `gorm:"column:banner_url;type:text"`
+}
+
+func (Brand) TableName() string {
+	return "Brand"
 }

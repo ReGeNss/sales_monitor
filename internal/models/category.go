@@ -1,7 +1,10 @@
 package models
 
 type Category struct {
-    ID        uint      `gorm:"primaryKey;column:category_id"`
-    Name      string    `gorm:"not null;unique"`
-    Products  []Product `gorm:"foreignKey:CategoryID"`
+	CategoryID int    `gorm:"primaryKey;column:category_id;autoIncrement"`
+	Name       string `gorm:"unique;notNull;column:name;type:varchar(255)"`
+}
+
+func (Category) TableName() string {
+	return "Category"
 }

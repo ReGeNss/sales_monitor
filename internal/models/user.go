@@ -1,10 +1,16 @@
 package models
 
 type User struct {
-	ID                uint      `gorm:"primaryKey;column:user_id"`
-	Login             string    `gorm:"unique;not null"`
-	Password          string    `gorm:"not null"`
-	NFToken           string    `gorm:"column:nf_token"`
-	FavoritesProducts []Product `gorm:"many2many:favorite_product;foreignKey:ID;joinForeignKey:UserID;References:ID;joinReferences:ProductID"`
-	FavoritesBrands   []Brand   `gorm:"many2many:favorite_brand;foreignKey:ID;joinForeignKey:UserID;References:ID;joinReferences:BrandID"`
+	UserID   int    `gorm:"primaryKey;column:user_id;autoIncrement"`
+	Login    string `gorm:"unique;notNull;column:login;type:varchar(255)"`
+	Password string `gorm:"notNull;column:password;type:varchar(255)"`
+	NFToken  string `gorm:"column:nf_token;type:text"`
+
+	// Тільки необхідні зв'язки / Only necessary associations
+	FavoriteBrands   []Brand   `gorm:"many2many:Favorite_Brand;joinForeignKey:user_id;joinReferences:brand_id"`
+	FavoriteProducts []Product `gorm:"many2many:Favorite_Product;joinForeignKey:user_id;joinReferences:product_id"`
+}
+
+func (User) TableName() string {
+	return "User"
 }

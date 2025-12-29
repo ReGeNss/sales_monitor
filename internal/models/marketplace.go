@@ -1,7 +1,11 @@
 package models
-    
+
 type Marketplace struct {
-    ID   uint   `gorm:"primaryKey;column:marketplace_id"`
-    Name string `gorm:"not null;unique"`
-    URL  string `gorm:"not null;unique"`
+	MarketplaceID int    `gorm:"primaryKey;column:marketplace_id;autoIncrement"`
+	Name          string `gorm:"unique;notNull;column:name;type:varchar(255)"`
+	URL           string `gorm:"notNull;column:url;type:text"`
+}
+
+func (Marketplace) TableName() string {
+	return "Marketplace"
 }
