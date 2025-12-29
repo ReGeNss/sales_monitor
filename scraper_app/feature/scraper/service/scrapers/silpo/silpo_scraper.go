@@ -5,10 +5,11 @@ import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
 	"time"
+
 	"github.com/playwright-community/playwright-go"
 )
 
-func SilpoScraper(browser playwright.Browser, url string) []*entity.Product {
+func SilpoScraper(browser playwright.Browser, url string) []*entity.ScrapedProduct {
 	page, err := browser.NewPage()
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
@@ -94,8 +95,8 @@ func waitForStableElementCount(page playwright.Page, selector string, checkInter
 	return lastCount
 }
 
-func getProducts(page playwright.Page) []*entity.Product {
-	products := []*entity.Product{}
+func getProducts(page playwright.Page) []*entity.ScrapedProduct {
+	products := []*entity.ScrapedProduct{}
 
 	result, err := page.Evaluate(`
 		() => {
@@ -159,7 +160,7 @@ func getProducts(page playwright.Page) []*entity.Product {
 			continue
 		}
 
-		product := entity.NewProduct(
+		product := entity.NewScrapedProduct(
 			strings.TrimSpace(title),
 			currentPrice,
 			oldPrice,

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type Product struct {
+type ScrapedProduct struct {
 	ID              string
 	Name            string
 	RegularPrice    float64
@@ -15,13 +15,13 @@ type Product struct {
 	Image           string
 }
 
-func NewProduct(
+func NewScrapedProduct(
 	name string,
 	regularPrice string,
 	discountedPrice string,
 	image string,
-) *Product {
-	return &Product{
+) *ScrapedProduct {
+	return &ScrapedProduct{
 		Name:            name,
 		RegularPrice:    parsePrice(regularPrice),
 		DiscountedPrice: parsePrice(discountedPrice),

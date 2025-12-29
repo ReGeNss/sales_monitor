@@ -4,10 +4,11 @@ import (
 	"log"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
+
 	"github.com/playwright-community/playwright-go"
 )
 
-func ForaScraper(browser playwright.Browser, url string) []*entity.Product {
+func ForaScraper(browser playwright.Browser, url string) []*entity.ScrapedProduct {
 	context, err := browser.NewContext()
 	if err != nil {
 		log.Fatalf("could not create context: %v", err)
@@ -36,8 +37,8 @@ func ForaScraper(browser playwright.Browser, url string) []*entity.Product {
 
 }
 
-func getProducts(page playwright.Page) []*entity.Product {
-	products := []*entity.Product{}
+func getProducts(page playwright.Page) []*entity.ScrapedProduct {
+	products := []*entity.ScrapedProduct{}
 
 	items, err := page.Locator(".product-list-item").All()
 	if err != nil {
@@ -95,7 +96,7 @@ func getProducts(page playwright.Page) []*entity.Product {
 			imgSrc = ""
 		}
 
-		product := entity.NewProduct(
+		product := entity.NewScrapedProduct(
 			strings.TrimSpace(title),
 			currentPrice,
 			oldPrice,

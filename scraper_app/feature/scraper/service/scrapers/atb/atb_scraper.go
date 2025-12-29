@@ -8,10 +8,11 @@ import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strconv"
 	"strings"
+
 	"github.com/playwright-community/playwright-go"
 )
 
-func AtbScraper(browser playwright.Browser, url string) []*entity.Product {
+func AtbScraper(browser playwright.Browser, url string) []*entity.ScrapedProduct {
 	page, err := browser.NewPage()
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
@@ -21,7 +22,7 @@ func AtbScraper(browser playwright.Browser, url string) []*entity.Product {
 
 	countOfAllPages := getCountOfAllPages(page)
 
-	var products []*entity.Product
+	var products []*entity.ScrapedProduct
 
 	for i := 1; i < countOfAllPages; i++ {
 		products = append(products, getProducts(page)...)
@@ -38,7 +39,7 @@ func AtbScraper(browser playwright.Browser, url string) []*entity.Product {
 
 	products = append(products, getProducts(page)...)
 	page.Close()
-	
+
 	return products
 }
 
@@ -66,8 +67,8 @@ func getCountOfAllPages(page playwright.Page) int {
 	return int(math.Ceil(float64(countAll) / float64(countPerPage)))
 }
 
-func getProducts(page playwright.Page) []*entity.Product {
-	products := []*entity.Product{}
+func getProducts(page playwright.Page) []*entity.ScrapedProduct {
+	products := []*entity.ScrapedProduct{}
 
 	items, ok := page.Locator(".catalog-item").All()
 	if ok != nil {
@@ -108,7 +109,7 @@ func getProducts(page playwright.Page) []*entity.Product {
 			imgSrc = ""
 		}
 
-		product := entity.NewProduct(
+		product := entity.NewScrapedProduct(
 			strings.TrimSpace(title),
 			currentPrice,
 			oldPrice,
