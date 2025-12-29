@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+type ScrapedProducts struct {
+	Products []*ScrapedProduct
+	MarketplaceName string
+}
+
 type ScrapedProduct struct {
 	ID              string
 	Name            string

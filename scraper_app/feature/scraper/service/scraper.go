@@ -10,4 +10,5 @@ type Scraper func(context playwright.Browser, url string) []*entity.ScrapedProdu
 type ScraperConfig struct {
 	URLs    []string
 	Scraper Scraper
+	MarketplaceName string
 }

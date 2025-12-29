@@ -8,7 +8,7 @@ import (
 )
 
 type ScraperService interface {
-	Scrape() ([]*entity.ScrapedProduct, error)
+	Scrape() ([]*entity.ScrapedProducts, error)
 }
 
 type scraperServiceImpl struct {
@@ -23,8 +23,8 @@ func NewScraperService(scrapers []ScraperConfig, productService service.ProductS
 	}
 }
 
-func (s *scraperServiceImpl) Scrape() ([]*entity.ScrapedProduct, error) {
-	scrapedProducts := []*entity.ScrapedProduct{}
+func (s *scraperServiceImpl) Scrape() ([]*entity.ScrapedProducts, error) {
+	scrapedProducts := []*entity.ScrapedProducts{}
 	pw, err := playwright.Run()
 	if err != nil {
 		log.Fatalf("could not start playwright: %v", err)
@@ -46,7 +46,10 @@ func (s *scraperServiceImpl) Scrape() ([]*entity.ScrapedProduct, error) {
 		for _, url := range scraperConfig.URLs {
 			log.Printf("scraping %s", url)
 			products := scraperConfig.Scraper(browser, url)
-			scrapedProducts = append(scrapedProducts, products...)
+			scrapedProducts = append(scrapedProducts, &entity.ScrapedProducts{
+				Products: products,
+				MarketplaceName: scraperConfig.MarketplaceName,
+			})
 			log.Printf("found %d products", len(products))
 		}
 	}
