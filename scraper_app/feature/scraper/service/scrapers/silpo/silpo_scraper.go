@@ -5,7 +5,6 @@ import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
 	"time"
-
 	"github.com/playwright-community/playwright-go"
 )
 
@@ -65,7 +64,27 @@ func SilpoScraper(browser playwright.Browser, url string) []*entity.ScrapedProdu
 
 	products := getProducts(page)
 
-	return products
+	productsWithBrand := []*entity.ScrapedProduct{}
+
+	for _, product := range products {
+		page, err = browser.NewPage()
+		if err != nil {
+			log.Fatalf("could not create page: %v", err)
+		}
+
+		page.Goto(product.URL)
+		page.WaitForLoadState()
+
+		product, err = getProductBrand(page, product)
+		if err != nil {
+			log.Printf("could not get product brand: %v", err)
+			continue
+		}
+		productsWithBrand = append(productsWithBrand, product)
+		page.Close()
+	}
+
+	return productsWithBrand
 }
 
 func waitForStableElementCount(page playwright.Page, selector string, checkInterval time.Duration, maxChecks int) int {
@@ -122,11 +141,15 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 					imgSrc = imgEl.getAttribute('src') || '';
 				}
 				
+				const urlEl = item.querySelector('.product-card__link');
+				const url = urlEl ? (urlEl.getAttribute('href') || '') : '';
+
 				products.push({
 					title: title,
 					currentPrice: currentPrice,
 					oldPrice: oldPrice,
-					imgSrc: imgSrc
+					imgSrc: imgSrc,
+					url: url,
 				});
 			}
 			
@@ -155,6 +178,7 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 		currentPrice, _ := productMap["currentPrice"].(string)
 		oldPrice, _ := productMap["oldPrice"].(string)
 		imgSrc, _ := productMap["imgSrc"].(string)
+		url, _ := productMap["url"].(string)
 
 		if title == "" || currentPrice == "" {
 			continue
@@ -165,11 +189,47 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 			currentPrice,
 			oldPrice,
 			imgSrc,
+			"https://silpo.ua" + url,
 		)
-		log.Printf("product: %+v", product)
 
 		products = append(products, product)
 	}
 
 	return products
+}
+
+
+func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
+	descriptions, err := page.Locator(".mat-expansion-panel").All()
+	if err != nil {
+		log.Printf("could not get brand: %v", err)
+	}
+
+	for _, item := range descriptions {	
+		textContent, err := item.TextContent()
+		if err != nil {
+			log.Printf("could not get text content: %v", err)
+			continue
+		}
+		if strings.Contains(textContent, "Загальна інформація") {
+			description, err := item.Locator(".attributes-list_block").All()
+			if err != nil {
+				return nil, err
+			}
+			for _, attribute := range description {
+				attributeTitle, _ := attribute.Locator("[data-autotestid='product-attributes-list-block-title']").TextContent()
+
+				if  strings.TrimSpace(attributeTitle) == "Торгова марка" { 
+					attributeValue, err := attribute.Locator(".attributes-list_block-value").TextContent()
+					if err != nil { 
+						return nil, err
+					}
+					product.BrandName = strings.TrimSpace(attributeValue)
+					return product, nil
+				}
+			}
+		}
+		
+	}
+	return nil, err
 }

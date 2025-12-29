@@ -101,6 +101,7 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 			currentPrice,
 			oldPrice,
 			imgSrc,
+			"",
 		)
 
 		products = append(products, product)
