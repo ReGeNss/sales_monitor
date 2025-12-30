@@ -1,1 +1,3 @@
+
+
 ALTER TABLE Product ADD FULLTEXT(name_fingerprint);

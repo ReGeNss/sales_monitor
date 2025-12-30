@@ -1,3 +1,4 @@
-h1:B1PGJHcBfY5GeAkWvapQAQB/bP2EG5Bj8PIyIHquRyg=
+h1:jlGywCrDscgU96OZ2CUi4shcuo3vv0r7HIgz7lgPm6U=
 01__init_tabels.sql h1:PHFuYfEzOO6BJvQwzVpoWJFJauKA2FLkOrfFVN0TJ/c=
-02__create_product_name_fingerprint_index.sql h1:Oh4+ofg2uDmKDDNTeLhdIZOfL+Uf2BypdesytD53QaA=
+02__create_full_text_search_stop_words_table.sql h1:M5Xp7W1GRNQICcBZkmx1dzcyfay5qqfFqy0oJ+iHCBE=
+03__create_product_name_fingerprint_index.sql h1:+75KNGCWVruaIX/LiaOE8EgV4UxqXzNSXRsY4SN6ZHY=

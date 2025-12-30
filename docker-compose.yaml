@@ -6,6 +6,8 @@ services:
       MARIADB_DATABASE: ${DATABASE_NAME}
       MARIADB_USER: ${DB_USER_NAME}
       MARIADB_PASSWORD: ${DB_USER_PASSWORD}
+    command: 
+      - --innodb_ft_server_stopword_table=${DATABASE_NAME}/full_text_search_stop_words
     ports:
       - "${DB_PORT}:${DB_PORT}"
     healthcheck:
