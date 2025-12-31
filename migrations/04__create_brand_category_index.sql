@@ -1,0 +1,1 @@
+CREATE INDEX brand_category_product_indx ON Product(category_id, brand_id)
