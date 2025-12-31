@@ -71,24 +71,30 @@ func (s *productServiceImpl) ProcessProducts(scrapedData []*entity.ScrapedProduc
 			}
 
 			for _, product := range products {
-				fingerprint := utils.NormalizeProductName(product.Name)
+				fingerprint := utils.NormalizeProductName(product.Name, brandName, data.Category)
 
 				var productID int
 
 				existingProduct, err := s.productRepository.GetProductByFingerprint(fingerprint)
 
 				if err != nil {
-					matchedProductID, err := s.productRepository.GetMostSimilarProductID(fingerprint)
+					matchedProductID, err := s.productRepository.GetMostSimilarProductID(fingerprint, brandID, categoryID)
 					if err != nil {
-						s.productRepository.CreateProduct(&models.Product{
+						id, err := s.productRepository.CreateProduct(&models.Product{
 							Name:            product.Name,
 							NameFingerprint: fingerprint,
 							ImageURL:        product.Image,
 							BrandID:         brandID,
 							CategoryID:      categoryID,
 						})
+						if err != nil {
+							log.Printf("could not create product: %v", err)
+							continue
+						}
+						productID = int(id)
+					} else {
+						productID = int(matchedProductID)
 					}
-					productID = int(matchedProductID)
 				} else {
 					productID = existingProduct.ProductID
 				}
@@ -108,6 +114,9 @@ func (s *productServiceImpl) ProcessProducts(scrapedData []*entity.ScrapedProduc
 func groupProductsByBrand(products []*entity.ScrapedProduct) map[string][]*entity.ScrapedProduct {
 	brandProducts := make(map[string][]*entity.ScrapedProduct)
 	for _, product := range products {
+		if product == nil {
+			continue
+		}
 		brandProducts[product.BrandName] = append(brandProducts[product.BrandName], product)
 	}
 	return brandProducts

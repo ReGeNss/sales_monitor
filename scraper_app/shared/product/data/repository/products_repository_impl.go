@@ -2,9 +2,10 @@ package repository
 
 import (
 	"fmt"
-	"gorm.io/gorm"
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
+	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
+	"gorm.io/gorm"
 )
 
 type productRepositoryImpl struct {
@@ -72,18 +73,34 @@ func (p *productRepositoryImpl) CreateProduct(product *models.Product) (uint, er
 	return uint(product.ProductID), p.db.Error
 }
 
-func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string) (uint, error) {
-	var product models.Product
+func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, brandID int, categoryID int) (uint, error) {
+	var products []models.Product
 	err := p.db.Model(&models.Product{}).
-		Select("product_id").
-		Where("MATCH(name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0.95", fingerprint).
+		Select("product_id, name_fingerprint").
+		Where("category_id = ? AND brand_id = ? AND MATCH(name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0", categoryID, brandID, fingerprint).
 		Order(fmt.Sprintf("MATCH(name_fingerprint) AGAINST('%s' IN NATURAL LANGUAGE MODE) DESC", fingerprint)).
-		Limit(1).
-		First(&product).Error
+		Limit(4).
+		Find(&products).Error
 	if err != nil {
 		return 0, err
 	}
-	return uint(product.ProductID), nil
+
+	bestSimilarity := 0
+	bestProductID := 0
+
+	for _, product := range products {
+		similarity := fuzzy.Ratio(fingerprint, product.NameFingerprint)
+		if similarity > bestSimilarity {
+			bestSimilarity = similarity
+			bestProductID = product.ProductID
+		}
+	}
+	
+	if(bestSimilarity >= 95) {
+		return uint(bestProductID), nil
+	}
+
+	return 0, fmt.Errorf("no similar product found")
 }
 
 func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint string) (*models.Product, error) {

@@ -6,7 +6,7 @@ import (
 
 type ProductRepository interface {
 	GetProductByFingerprint(fingerprint string) (*models.Product, error)
-	GetMostSimilarProductID(fingerprint string) (uint, error)
+	GetMostSimilarProductID(fingerprint string, brandID int, categoryID int) (uint, error)
 	CreateProduct(product *models.Product) (uint,error)
 	AddPriceToProduct(price *models.Price) error
 

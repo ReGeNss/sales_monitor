@@ -6,11 +6,16 @@ import (
 	"strings"
 )
 
-func NormalizeProductName(name string) string {
+func NormalizeProductName(name string, brand string, category string) string {
 	loweredName := strings.ToLower(name)
+	loweredBrand := strings.ToLower(brand)
+	loweredCategory := strings.ToLower(category)
+
+	removedBrand := strings.ReplaceAll(loweredName, loweredBrand, "")
+	removedCategory := strings.ReplaceAll(removedBrand, loweredCategory, "")
 
 	specialCharactersRegex := regexp.MustCompile(`[^\p{L}\p{N}\s]`)
-	cleanedName := specialCharactersRegex.ReplaceAllString(loweredName, "")
+	cleanedName := specialCharactersRegex.ReplaceAllString(removedCategory, "")
 	
 	words := strings.Fields(cleanedName)
 
