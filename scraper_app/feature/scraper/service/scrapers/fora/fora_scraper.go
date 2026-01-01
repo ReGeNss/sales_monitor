@@ -2,8 +2,10 @@ package fora
 
 import (
 	"log"
+	"sales_monitor/scraper_app/feature/scraper/utils"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
+
 	"github.com/playwright-community/playwright-go"
 )
 
@@ -133,6 +135,19 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 }
 
 func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
+	amount, err := page.Locator(".preview-product-weight").InnerText()
+
+	if err != nil {
+		log.Printf("could not get amount: %v", err)
+		return nil, err
+	}
+
+	if strings.Contains(amount, "л") {
+		product.Volume = utils.ScraperFormatVolumeWeight(amount)
+	} else {
+		product.Weight = utils.ScraperFormatVolumeWeight(amount)
+	}
+
 	descriptions, err := page.Locator(".product-details-column.trademark").All()
 	
 	if err != nil {
