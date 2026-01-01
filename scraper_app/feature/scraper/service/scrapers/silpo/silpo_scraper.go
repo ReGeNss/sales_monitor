@@ -2,6 +2,8 @@ package silpo
 
 import (
 	"log"
+	"regexp"
+	"sales_monitor/scraper_app/feature/scraper/utils"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
 	"time"
@@ -75,7 +77,7 @@ func SilpoScraper(browser playwright.Browser, url string) []*entity.ScrapedProdu
 		page.Goto(product.URL)
 		page.WaitForLoadState()
 
-		product, err = getProductBrand(page, product)
+		product, err = getProductDetails(page, product)
 		if err != nil {
 			log.Printf("could not get product brand: %v", err)
 			continue
@@ -199,7 +201,22 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 }
 
 
-func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
+func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
+	title, err := page.Locator("h1").TextContent()
+	if err != nil {
+		log.Printf("could not get volume, weight: %v", err)
+		return nil, err
+	}
+
+	re := regexp.MustCompile(`[\d|\,|\.]+[А-я-a-z|\s]+$`)
+	amount := re.FindAllString(strings.TrimSpace(title), -1)
+		if len(amount) == 0 || len(amount[len(amount)-1]) == 0 {
+		log.Printf("could not get amount: %v", err)
+		return nil, err
+	}
+
+	utils.ScraperSetVolumeOrWeight(amount[len(amount)-1], product)
+
 	descriptions, err := page.Locator(".mat-expansion-panel").All()
 	if err != nil {
 		log.Printf("could not get brand: %v", err)
