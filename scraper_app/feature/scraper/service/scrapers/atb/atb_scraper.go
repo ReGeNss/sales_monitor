@@ -49,7 +49,7 @@ func AtbScraper(browser playwright.Browser, url string) []*entity.ScrapedProduct
 		page.Goto(product.URL)
 		page.WaitForLoadState()
 
-		product, err = getProductBrand(page, product)
+		product, err = getProductDetails(page, product)
 		if err != nil {
 			log.Printf("could not get product brand: %v", err)
 			continue
@@ -148,7 +148,7 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 }
 
 
-func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
+func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
 	brandElement, err := page.Locator(".product-characteristics__item").All()
 	if err != nil {
 		log.Printf("could not get brand: %v", err)
@@ -156,15 +156,41 @@ func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*ent
 	}
 	for _, item := range brandElement {
 		elementTitle, err := item.Locator(".product-characteristics__name").InnerText()
-		if err == nil && elementTitle == "Торгова марка" {
-			brandName, err := item.Locator(".product-characteristics__value").InnerText()
+		if err != nil {
+			continue
+		}
+
+		if elementTitle == "Торгова марка" {
+			brandName, err := getProductAttributeValue(item)
 			if err != nil {
 				log.Printf("could not get brand name: %v", err)
 				return nil, err
 			}
 			product.BrandName = brandName
-			break
+		}
+
+		if elementTitle == "Об'єм" {
+			volume, err := getProductAttributeValue(item)
+			if err == nil {
+				product.Volume = volume
+			}
+		}
+
+		if elementTitle == "Вага" {
+			weight, err := getProductAttributeValue(item)
+			if err == nil {
+				product.Weight = weight
+			}
 		}
 	}
 	return product, nil
+}
+
+func getProductAttributeValue(item playwright.Locator) (string, error) {
+	volumeElement, err := item.Locator(".product-characteristics__value").InnerText()
+	if err != nil {
+		log.Printf("could not get volume: %v", err)
+		return "", err
+	}
+	return volumeElement, nil
 }
