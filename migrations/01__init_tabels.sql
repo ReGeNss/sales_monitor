@@ -3,24 +3,24 @@ CREATE TABLE `User` (
     login VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     nf_token TEXT
-) ENGINE=InnoDB;
+);
 
 CREATE TABLE Category (
     category_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) UNIQUE NOT NULL
-) ENGINE=InnoDB;
+);
 
 CREATE TABLE Brand (
     brand_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) UNIQUE NOT NULL,
     banner_url TEXT
-) ENGINE=InnoDB;
+);
 
 CREATE TABLE Marketplace (
     marketplace_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) UNIQUE NOT NULL,
     url TEXT NOT NULL
-) ENGINE=InnoDB;
+);
 
 
 CREATE TABLE Product (
@@ -32,7 +32,7 @@ CREATE TABLE Product (
     image_url TEXT,
     CONSTRAINT fk_product_brand FOREIGN KEY (brand_id) REFERENCES Brand(brand_id),
     CONSTRAINT fk_product_category FOREIGN KEY (category_id) REFERENCES Category(category_id)
-) ENGINE=InnoDB;
+);
 
 CREATE TABLE Price (
     price_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -46,7 +46,7 @@ CREATE TABLE Price (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_price_product FOREIGN KEY (product_id) REFERENCES Product(product_id),
     CONSTRAINT fk_price_marketplace FOREIGN KEY (marketplace_id) REFERENCES Marketplace(marketplace_id)
-) ENGINE=InnoDB;
+);
 
 CREATE TABLE Favorite_Product (
     favorite_product_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -54,7 +54,7 @@ CREATE TABLE Favorite_Product (
     product_id INT NOT NULL,
     CONSTRAINT fk_fav_prod_user FOREIGN KEY (user_id) REFERENCES `User`(user_id),
     CONSTRAINT fk_fav_prod_product FOREIGN KEY (product_id) REFERENCES Product(product_id)
-) ENGINE=InnoDB;
+);
 
 CREATE TABLE Favorite_Brand (
     favorite_brand_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -62,4 +62,4 @@ CREATE TABLE Favorite_Brand (
     brand_id INT NOT NULL,
     CONSTRAINT fk_fav_brand_user FOREIGN KEY (user_id) REFERENCES `User`(user_id),
     CONSTRAINT fk_fav_brand_brand FOREIGN KEY (brand_id) REFERENCES Brand(brand_id)
-) ENGINE=InnoDB;
+);
