@@ -5,7 +5,6 @@ import (
 	"sales_monitor/scraper_app/feature/scraper/utils"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
-
 	"github.com/playwright-community/playwright-go"
 )
 
@@ -143,9 +142,9 @@ func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*ent
 	}
 
 	if strings.Contains(amount, "л") {
-		product.Volume = utils.ScraperFormatVolumeWeight(amount)
+		utils.ScraperSetVolumeOrWeight(amount, product)
 	} else {
-		product.Weight = utils.ScraperFormatVolumeWeight(amount)
+		utils.ScraperSetVolumeOrWeight(amount, product)
 	}
 
 	descriptions, err := page.Locator(".product-details-column.trademark").All()

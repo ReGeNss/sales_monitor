@@ -168,20 +168,20 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 				log.Printf("could not get brand name: %v", err)
 				return nil, err
 			}
-			product.BrandName = utils.ScraperFormatVolumeWeight(brandName)
+			product.BrandName = brandName
 		}
 
 		if elementTitle == "Об'єм" {
 			volume, err := getProductAttributeValue(item)
 			if err == nil {
-				product.Volume = utils.ScraperFormatVolumeWeight(volume)
+				utils.ScraperSetVolumeOrWeight(volume, product)
 			}
 		}
 
 		if elementTitle == "Вага" {
 			weight, err := getProductAttributeValue(item)
 			if err == nil {
-				product.Weight = utils.ScraperFormatVolumeWeight(weight)
+				utils.ScraperSetVolumeOrWeight(weight, product)
 			}
 		}
 	}
