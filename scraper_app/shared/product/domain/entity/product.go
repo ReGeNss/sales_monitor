@@ -21,6 +21,8 @@ type ScrapedProduct struct {
 	Image           string
 	BrandName       string
 	URL             string
+	Volume          string
+	Weight          string
 }
 
 func NewScrapedProduct(

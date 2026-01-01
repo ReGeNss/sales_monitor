@@ -5,9 +5,11 @@ import (
 	"log"
 	"math"
 	"regexp"
+	"sales_monitor/scraper_app/feature/scraper/utils"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strconv"
 	"strings"
+
 	"github.com/playwright-community/playwright-go"
 )
 
@@ -166,20 +168,20 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 				log.Printf("could not get brand name: %v", err)
 				return nil, err
 			}
-			product.BrandName = brandName
+			product.BrandName = utils.ScraperFormatVolumeWeight(brandName)
 		}
 
 		if elementTitle == "Об'єм" {
 			volume, err := getProductAttributeValue(item)
 			if err == nil {
-				product.Volume = volume
+				product.Volume = utils.ScraperFormatVolumeWeight(volume)
 			}
 		}
 
 		if elementTitle == "Вага" {
 			weight, err := getProductAttributeValue(item)
 			if err == nil {
-				product.Weight = weight
+				product.Weight = utils.ScraperFormatVolumeWeight(weight)
 			}
 		}
 	}
