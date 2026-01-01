@@ -7,8 +7,7 @@ type Product struct {
 	Name            string `gorm:"unique;notNull;column:name;type:varchar(255)"`
 	CategoryID      int    `gorm:"notNull;column:category_id"`
 	ImageURL        string `gorm:"column:image_url;type:text"`
-
-	// Прямі зв'язки для Preload / Direct relationships for Preload
+	Attributes      []ProductAttribute `gorm:"foreignKey:ProductID"`
 	Prices []Price `gorm:"foreignKey:ProductID"`
 }
 
