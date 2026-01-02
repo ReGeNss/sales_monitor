@@ -1,6 +1,6 @@
-h1:u9SYHLsRvopv+MZp2NS+uPktA+nyVVDRvYzm2/Y5R5w=
-01__init_tabels.sql h1:anXAYWhvJLGfoPHLiwCBJTWS70f5qOWNfPRgrf3OEZ4=
-02__create_full_text_search_stop_words_table.sql h1:FJXCZVmm31yBMArZk9RpiQUoN7KE/046D7WLgO2R7Tc=
-03__create_product_name_fingerprint_index.sql h1:Aceol48Z+bHNQdGbSLXBn9oAoNgBmDdfCz/Gqvd4vwI=
-04__create_brand_category_index.sql h1:JZbtoMj5zsMdn1hT98RMaekALLiR4uHarC8NKx6PsWs=
-05__add_attibutes_to_product.sql h1:Tv0eqjRLgU2jdz29Dw6lAGN8N10PqYzoWVxbWf1YN+U=
+h1:gVwZ1tExcqL8GZXCLYRs7g+Fqtn/hVHY4po4houspQo=
+01__init_tabels.sql h1:vQioNH00HZUPr/ze6lo2zhUvFWDQ3ojH/NoGWdPtM1k=
+02__create_full_text_search_stop_words_table.sql h1:wy0jAMkOvSF2oYTiSQYerFiA6XRTB2Qpw6tURLiWjPw=
+03__create_product_name_fingerprint_index.sql h1:BvQx4AF6z7BZYD3GlJNvAAHZysXt3T+hre9x4pFFbCQ=
+04__create_brand_category_index.sql h1:VP1F+fQ9awgzZSS+tcn5zptmKu9SgzaE5NfCX+u6rk4=
+05__add_attibutes_to_product.sql h1:+5B/iBD42GBeSWnGSUXNwg5wqmR7uIAuDwmqEzHyYTk=
