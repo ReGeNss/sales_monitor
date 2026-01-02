@@ -67,20 +67,39 @@ func (p *productRepositoryImpl) AddPriceToProduct(price *models.Price) error {
 	return p.db.Model(&models.Price{}).Create(price).Error
 }
 
-func (p *productRepositoryImpl) CreateProduct(product *models.Product) (uint, error) {
-	p.db.Model(&models.Product{}).Create(product)
+func (p *productRepositoryImpl) CreateProduct(product *models.Product, attributes []*models.ProductAttribute) (uint, error) {
+	p.db.Model(&models.Product{}).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.Product{}).Create(product).Error; err != nil {
+			return err
+		}
+
+		for _, attribute := range attributes {
+			attribute.ProductID = product.ProductID
+			if err := tx.Model(&models.ProductAttribute{}).Create(attribute).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 
 	return uint(product.ProductID), p.db.Error
 }
 
-func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, brandID int, categoryID int) (uint, error) {
+func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, attributes []*models.ProductAttribute, brandID int, categoryID int) (uint, error) {
 	var products []models.Product
-	err := p.db.Model(&models.Product{}).
-		Select("product_id, name_fingerprint").
-		Where("category_id = ? AND brand_id = ? AND MATCH(name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0", categoryID, brandID, fingerprint).
-		Order(fmt.Sprintf("MATCH(name_fingerprint) AGAINST('%s' IN NATURAL LANGUAGE MODE) DESC", fingerprint)).
+
+	query := p.db.Model(&models.Product{}).Table("Product as p").
+		Select("p.product_id, p.name_fingerprint").
+		Where("category_id = ? AND brand_id = ?", categoryID, brandID)
+
+	query = attributesToQuery(attributes, query)
+
+	err := query.Where("MATCH(p.name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0", fingerprint).
+		Order(fmt.Sprintf("MATCH(p.name_fingerprint) AGAINST('%s' IN NATURAL LANGUAGE MODE) DESC", fingerprint)).
 		Limit(4).
 		Find(&products).Error
+
 	if err != nil {
 		return 0, err
 	}
@@ -95,19 +114,36 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, bran
 			bestProductID = product.ProductID
 		}
 	}
-	
-	if(bestSimilarity >= 95) {
+
+	if bestSimilarity >= 95 {
 		return uint(bestProductID), nil
 	}
 
 	return 0, fmt.Errorf("no similar product found")
 }
 
-func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint string) (*models.Product, error) {
+func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint string, brandID int, categoryID int, attributes []*models.ProductAttribute) (*models.Product, error) {
 	var product models.Product
-	err := p.db.Model(&models.Product{}).Where("name_fingerprint = ?", fingerprint).First(&product).Error
-	if err != nil {
+	query := p.db.Model(&models.Product{}).Table("Product as p").Where("p.name_fingerprint = ? AND p.brand_id = ? AND p.category_id = ?", fingerprint, brandID, categoryID)
+	query = attributesToQuery(attributes, query)
+
+	if err := query.First(&product).Error; err != nil {
 		return nil, err
 	}
 	return &product, nil
+}
+
+func (p *productRepositoryImpl) CreateProductAttribute(attribute *models.ProductAttribute) error {
+	return p.db.Model(&models.ProductAttribute{}).Create(attribute).Error
+}
+
+func attributesToQuery(attributes []*models.ProductAttribute, query *gorm.DB) *gorm.DB {
+	for i, attribute := range attributes {
+		query = query.Joins(fmt.Sprintf("JOIN product_attributes attr%[1]d ON attr%[1]d.product_id = p.product_id", i)).
+			Where(fmt.Sprintf("attr%[1]d.attribute_type = ? AND attr%[1]d.value = ?", i),
+				attribute.AttributeType,
+				attribute.Value,
+			)
+	}
+	return query
 }

@@ -72,21 +72,38 @@ func (s *productServiceImpl) ProcessProducts(scrapedData []*entity.ScrapedProduc
 
 			for _, product := range products {
 				fingerprint := utils.NormalizeProductName(product.Name, brandName, data.Category)
+				attributes := []*models.ProductAttribute{}
+
+				if product.Volume != "" {
+					attributes = append(attributes, &models.ProductAttribute{
+						AttributeType: models.VOLUME,
+						Value:         product.Volume,
+					})
+				}
+				if product.Weight != "" {
+					attributes = append(attributes, &models.ProductAttribute{
+						AttributeType: models.WEIGHT,
+						Value:         product.Weight,
+					})
+				}
 
 				var productID int
 
-				existingProduct, err := s.productRepository.GetProductByFingerprint(fingerprint)
+				existingProduct, err := s.productRepository.GetProductByFingerprint(fingerprint, brandID, categoryID, attributes)
 
 				if err != nil {
-					matchedProductID, err := s.productRepository.GetMostSimilarProductID(fingerprint, brandID, categoryID)
+					matchedProductID, err := s.productRepository.GetMostSimilarProductID(fingerprint, attributes, brandID, categoryID)
 					if err != nil {
+						
+
 						id, err := s.productRepository.CreateProduct(&models.Product{
 							Name:            product.Name,
 							NameFingerprint: fingerprint,
 							ImageURL:        product.Image,
 							BrandID:         brandID,
 							CategoryID:      categoryID,
-						})
+						}, attributes)
+
 						if err != nil {
 							log.Printf("could not create product: %v", err)
 							continue
