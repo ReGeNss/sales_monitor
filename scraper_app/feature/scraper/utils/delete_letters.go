@@ -11,7 +11,7 @@ import (
 func ScraperSetVolumeOrWeight(text string, product *entity.ScrapedProduct) {
 	loweredText := strings.ToLower(text)
 	isVolume := strings.Contains(loweredText, "л") 
-	shouldMultiplyBy1000 := !(strings.Contains(loweredText, "кг") || strings.Contains(loweredText, "мл"))
+	shouldDivideBy1000 := !(strings.Contains(loweredText, "кг") || strings.Contains(loweredText, "л"))
 
 	re := regexp.MustCompile(`[^\d.,]`)
 	cleaned := re.ReplaceAllString(text, "")
@@ -22,11 +22,11 @@ func ScraperSetVolumeOrWeight(text string, product *entity.ScrapedProduct) {
 		return
 	}
 
-	if shouldMultiplyBy1000 {
-		value *= 1000
+	if shouldDivideBy1000 {
+		value /= 1000
 	}
 	
-	formattedValue := strconv.Itoa(int(value))
+	formattedValue := strconv.FormatFloat(value, 'f', 3, 64)
 	if isVolume {
 		product.Volume = formattedValue
 	} else {

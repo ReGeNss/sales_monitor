@@ -171,7 +171,7 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 			product.BrandName = brandName
 		}
 
-		if elementTitle == "Об'єм" {
+		if elementTitle == "Об’єм" {
 			volume, err := getProductAttributeValue(item)
 			if err == nil {
 				utils.ScraperSetVolumeOrWeight(volume, product)

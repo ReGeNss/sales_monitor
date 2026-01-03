@@ -11,7 +11,13 @@ func NormalizeProductName(name string, brand string, category string) string {
 	loweredBrand := strings.ToLower(brand)
 	loweredCategory := strings.ToLower(category)
 
-	removedBrand := strings.ReplaceAll(loweredName, loweredBrand, "")
+	gramsRegex := regexp.MustCompile(`(\d+)\s*(грам|гр|г)\.*`)
+	gramsFormatted := gramsRegex.ReplaceAllString(loweredName, "${1}гр")
+	
+	kilogramRegex := regexp.MustCompile(`(\d+)\s*(кг|кілограм|кіло|кг|кіло)\.*`)
+	kilogramFormatted := kilogramRegex.ReplaceAllString(gramsFormatted, "${1}кг")
+
+	removedBrand := strings.ReplaceAll(kilogramFormatted, loweredBrand, "")
 	removedCategory := strings.ReplaceAll(removedBrand, loweredCategory, "")
 
 	specialCharactersRegex := regexp.MustCompile(`[^\p{L}\p{N}\s]`)
@@ -23,13 +29,8 @@ func NormalizeProductName(name string, brand string, category string) string {
 		return strings.Compare(a, b)
 	})
 
-	sortedName := strings.Join(words, " ")
+	normalizedName := strings.Join(words, " ")
 
-	gramsRegex := regexp.MustCompile(`(\d+)\s*(грам|гр|г)\.*`)
-	gramsFormatted := gramsRegex.ReplaceAllString(sortedName, "${1}гр")
-	
-	kilogramRegex := regexp.MustCompile(`(\d+)\s*(кг|кілограм|кіло|кг|кіло)\.*`)
-	kilogramFormatted := kilogramRegex.ReplaceAllString(gramsFormatted, "${1}кг")
 
-	return kilogramFormatted
+	return normalizedName
 }
