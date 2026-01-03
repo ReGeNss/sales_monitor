@@ -6,6 +6,7 @@ import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	"sales_monitor/scraper_app/shared/product/utils"
+	"strings"
 )
 
 type ProductService interface {
@@ -52,7 +53,17 @@ func (s *productServiceImpl) ProcessProducts(scrapedData []*entity.ScrapedProduc
 			categoryID = category.CategoryID
 		}
 
-		brandProducts := groupProductsByBrand(data.Products)
+		brandProducts, unknownBrandProducts := groupProductsByBrand(data.Products)
+
+		if(len(unknownBrandProducts) > 0) {
+			allBrands, err := s.productRepository.GetAllBrands()
+			if err != nil {
+				log.Printf("could not get all brands: %v", err)
+				continue
+			}
+			brandProducts = getBrandsFromProductName(unknownBrandProducts, brandProducts, allBrands)
+			
+		}
 
 		for brandName, products := range brandProducts {
 			var brandID int
@@ -94,7 +105,6 @@ func (s *productServiceImpl) ProcessProducts(scrapedData []*entity.ScrapedProduc
 				if err != nil {
 					matchedProductID, err := s.productRepository.GetMostSimilarProductID(fingerprint, attributes, brandID, categoryID)
 					if err != nil {
-						
 
 						id, err := s.productRepository.CreateProduct(&models.Product{
 							Name:            product.Name,
@@ -128,13 +138,42 @@ func (s *productServiceImpl) ProcessProducts(scrapedData []*entity.ScrapedProduc
 	}
 }
 
-func groupProductsByBrand(products []*entity.ScrapedProduct) map[string][]*entity.ScrapedProduct {
+func groupProductsByBrand(products []*entity.ScrapedProduct) (map[string][]*entity.ScrapedProduct, []*entity.ScrapedProduct) {
 	brandProducts := make(map[string][]*entity.ScrapedProduct)
+	unknownBrandProducts := []*entity.ScrapedProduct{}
 	for _, product := range products {
 		if product == nil {
 			continue
 		}
+		if product.BrandName == "" {
+			unknownBrandProducts = append(unknownBrandProducts, product)
+			continue
+		}
+
 		brandProducts[product.BrandName] = append(brandProducts[product.BrandName], product)
 	}
+	return brandProducts, unknownBrandProducts
+}
+
+func getBrandsFromProductName(unknownBrandProducts []*entity.ScrapedProduct, brandProducts map[string][]*entity.ScrapedProduct, allBrands []models.Brand) map[string][]*entity.ScrapedProduct {
+	brands := map[string]interface{}{}
+
+	for brandName := range brandProducts {
+		brands[brandName] = nil
+	}
+
+	for _, brand := range allBrands {
+		brands[brand.Name] = nil
+	}
+
+	for _, product := range unknownBrandProducts {
+		for brandName := range brands {
+			if strings.Contains(product.Name, brandName) {
+				brandProducts[brandName] = append(brandProducts[brandName], product)
+				break
+			}
+		}
+	}
+
 	return brandProducts
 }

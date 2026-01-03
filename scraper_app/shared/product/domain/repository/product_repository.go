@@ -18,4 +18,5 @@ type ProductRepository interface {
 	GetCategoryByName(name string) (*models.Category, error)
 	GetBrandByName(name string) (*models.Brand, error)
 	GetMarketplaceByName(name string) (*models.Marketplace, error)
+	GetAllBrands() ([]models.Brand, error)
 }

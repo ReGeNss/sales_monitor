@@ -2,10 +2,10 @@ package repository
 
 import (
 	"fmt"
-	"sales_monitor/internal/models"
-	"sales_monitor/scraper_app/shared/product/domain/repository"
 	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
 	"gorm.io/gorm"
+	"sales_monitor/internal/models"
+	"sales_monitor/scraper_app/shared/product/domain/repository"
 )
 
 type productRepositoryImpl struct {
@@ -108,7 +108,7 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, attr
 	bestProductID := 0
 
 	for _, product := range products {
-		similarity := fuzzy.Ratio(fingerprint, product.NameFingerprint)
+		similarity := fuzzy.TokenSortRatio(fingerprint, product.NameFingerprint)
 		if similarity > bestSimilarity {
 			bestSimilarity = similarity
 			bestProductID = product.ProductID
@@ -146,4 +146,13 @@ func attributesToQuery(attributes []*models.ProductAttribute, query *gorm.DB) *g
 			)
 	}
 	return query
+}
+
+func (p *productRepositoryImpl) GetAllBrands() ([]models.Brand, error) {
+	var brands []models.Brand
+	err := p.db.Model(&models.Brand{}).Find(&brands).Error
+	if err != nil {
+		return nil, err
+	}
+	return brands, nil
 }
