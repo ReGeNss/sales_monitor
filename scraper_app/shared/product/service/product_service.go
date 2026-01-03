@@ -82,7 +82,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData []*entity.ScrapedProduc
 			}
 
 			for _, product := range products {
-				fingerprint := utils.NormalizeProductName(product.Name, brandName, data.Category)
+				fingerprint := utils.NormalizeProductName(product.Name, []string{brandName, data.Category})
 				attributes := []*models.ProductAttribute{}
 
 				if product.Volume != "" {

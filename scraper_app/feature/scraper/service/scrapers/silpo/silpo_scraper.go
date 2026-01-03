@@ -10,7 +10,7 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-func SilpoScraper(browser playwright.Browser, url string) []*entity.ScrapedProduct {
+func SilpoScraper(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
 	page, err := browser.NewPage()
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
@@ -64,7 +64,7 @@ func SilpoScraper(browser playwright.Browser, url string) []*entity.ScrapedProdu
 		curLen = stableCount
 	}
 
-	products := getProducts(page)
+	products := getProducts(page, wordsToIgnore)
 
 	productsWithBrand := []*entity.ScrapedProduct{}
 
@@ -80,6 +80,7 @@ func SilpoScraper(browser playwright.Browser, url string) []*entity.ScrapedProdu
 		product, err = getProductDetails(page, product)
 		if err != nil {
 			log.Printf("could not get product brand: %v", err)
+			page.Close()
 			continue
 		}
 		productsWithBrand = append(productsWithBrand, product)
@@ -116,7 +117,7 @@ func waitForStableElementCount(page playwright.Page, selector string, checkInter
 	return lastCount
 }
 
-func getProducts(page playwright.Page) []*entity.ScrapedProduct {
+func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.ScrapedProduct {
 	products := []*entity.ScrapedProduct{}
 
 	result, err := page.Evaluate(`
@@ -129,6 +130,7 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 				if (!currentPriceEl) continue;
 				
 				const currentPrice = currentPriceEl.textContent?.trim() || '';
+				if(!currentPrice) continue;
 				
 				const oldPriceEl = item.querySelector('.product-card-price__displayOldPrice');
 				const oldPrice = oldPriceEl ? (oldPriceEl.textContent?.trim() || currentPrice) : currentPrice;
@@ -177,6 +179,7 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 		}
 
 		title, _ := productMap["title"].(string)
+		title = utils.ReplaceIgnoredWords(title, wordsToIgnore)
 		currentPrice, _ := productMap["currentPrice"].(string)
 		oldPrice, _ := productMap["oldPrice"].(string)
 		imgSrc, _ := productMap["imgSrc"].(string)
@@ -215,7 +218,11 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 		return nil, err
 	}
 
-	utils.ScraperSetVolumeOrWeight(amount[len(amount)-1], product)
+	err = utils.ScraperSetVolumeOrWeight(amount[len(amount)-1], product)
+	if err != nil {
+		log.Printf("could not set volume or weight: %v", err)
+		return nil, err
+	}
 
 	descriptions, err := page.Locator(".mat-expansion-panel").All()
 	if err != nil {

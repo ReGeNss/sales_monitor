@@ -13,7 +13,7 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-func AtbScraper(browser playwright.Browser, url string) []*entity.ScrapedProduct {
+func AtbScraper(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
 	page, err := browser.NewPage()
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
@@ -26,7 +26,7 @@ func AtbScraper(browser playwright.Browser, url string) []*entity.ScrapedProduct
 	var products []*entity.ScrapedProduct
 
 	for i := 1; i < countOfAllPages; i++ {
-		products = append(products, getProducts(page)...)
+		products = append(products, getProducts(page, wordsToIgnore)...)
 		page.Close()
 
 		page, err = browser.NewPage()
@@ -38,7 +38,7 @@ func AtbScraper(browser playwright.Browser, url string) []*entity.ScrapedProduct
 		page.WaitForLoadState()
 	}
 	
-	products = append(products, getProducts(page)...)
+	products = append(products, getProducts(page, wordsToIgnore)...)
 	page.Close()
 
 	productsWithBrand := []*entity.ScrapedProduct{}
@@ -87,7 +87,7 @@ func getCountOfAllPages(page playwright.Page) int {
 	return int(math.Ceil(float64(countAll) / float64(countPerPage)))
 }
 
-func getProducts(page playwright.Page) []*entity.ScrapedProduct {
+func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.ScrapedProduct {
 	products := []*entity.ScrapedProduct{}
 
 	items, ok := page.Locator(".catalog-item").All()
@@ -121,6 +121,8 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 			log.Printf("could not get title, skipping item: %v", err)
 			continue
 		}
+		
+		title = utils.ReplaceIgnoredWords(title, wordsToIgnore)
 
 		imgElement := item.Locator(".catalog-item__img")
 		imgSrc, err := imgElement.GetAttribute("src")

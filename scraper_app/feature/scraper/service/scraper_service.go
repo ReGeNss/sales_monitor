@@ -4,6 +4,7 @@ import (
 	"log"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
+
 	"github.com/playwright-community/playwright-go"
 )
 
@@ -12,13 +13,13 @@ type ScraperService interface {
 }
 
 type scraperServiceImpl struct {
-	configuration       []ScraperConfig
+	configuration  []ScraperConfig
 	productService service.ProductService
 }
 
 func NewScraperService(configuration []ScraperConfig, productService service.ProductService) ScraperService {
 	return &scraperServiceImpl{
-		configuration:       configuration,
+		configuration:  configuration,
 		productService: productService,
 	}
 }
@@ -31,7 +32,7 @@ func (s *scraperServiceImpl) Scrape() ([]*entity.ScrapedProducts, error) {
 	}
 	browser, err := pw.Chromium.Launch(
 		playwright.BrowserTypeLaunchOptions{
-			Headless: playwright.Bool(false), 
+			Headless: playwright.Bool(false),
 			Args: []string{
 				"--disable-blink-features=AutomationControlled",
 				"--disable-dev-shm-usage",
@@ -45,11 +46,11 @@ func (s *scraperServiceImpl) Scrape() ([]*entity.ScrapedProducts, error) {
 	for _, scraperConfig := range s.configuration {
 		for _, scrapingContent := range scraperConfig.ScrapingContent {
 			log.Printf("scraping %s", scrapingContent.URL)
-			products := scraperConfig.Scraper(browser, scrapingContent.URL)
+			products := scraperConfig.ScraperFunction(browser, scrapingContent.URL, scrapingContent.WordsToIgnore)
 			scrapedProducts = append(scrapedProducts, &entity.ScrapedProducts{
-				Products: products,
+				Products:        products,
 				MarketplaceName: scraperConfig.MarketplaceName,
-				Category: scrapingContent.Category,
+				Category:        scrapingContent.Category,
 			})
 			log.Printf("found %d products", len(products))
 		}

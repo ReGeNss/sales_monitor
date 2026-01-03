@@ -8,7 +8,7 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-func ForaScraper(browser playwright.Browser, url string) []*entity.ScrapedProduct {
+func ForaScraper(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
 	context, err := browser.NewContext()
 	if err != nil {
 		log.Fatalf("could not create context: %v", err)
@@ -31,7 +31,7 @@ func ForaScraper(browser playwright.Browser, url string) []*entity.ScrapedProduc
 		}
 	}
 
-	products := getProducts(page)
+	products := getProducts(page, wordsToIgnore)
 
 	productsWithBrand := []*entity.ScrapedProduct{}
 	for _, product := range products {
@@ -55,7 +55,7 @@ func ForaScraper(browser playwright.Browser, url string) []*entity.ScrapedProduc
 	return productsWithBrand
 }
 
-func getProducts(page playwright.Page) []*entity.ScrapedProduct {
+func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.ScrapedProduct {
 	products := []*entity.ScrapedProduct{}
 
 	items, err := page.Locator(".product-list-item").All()
@@ -106,6 +106,8 @@ func getProducts(page playwright.Page) []*entity.ScrapedProduct {
 			log.Printf("could not get title, skipping item: %v", err)
 			continue
 		}
+
+		title = utils.ReplaceIgnoredWords(title, wordsToIgnore)
 
 		imgElement := item.Locator(".product-list-item__image")
 		imgSrc, err := imgElement.GetAttribute("src")

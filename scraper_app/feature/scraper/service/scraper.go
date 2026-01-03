@@ -1,19 +1,21 @@
 package scraper
 
 import (
-	"github.com/playwright-community/playwright-go"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+
+	"github.com/playwright-community/playwright-go"
 )
 
-type Scraper func(context playwright.Browser, url string) []*entity.ScrapedProduct
+type Scraper func(context playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct
 
 type ScraperConfig struct {
 	ScrapingContent []ScrapingContent
-	Scraper         Scraper
+	ScraperFunction Scraper
 	MarketplaceName string
 }
 
 type ScrapingContent struct {
-	URL      string
-	Category string
+	URL           string
+	Category      string
+	WordsToIgnore []string
 }

@@ -2,10 +2,10 @@ package repository
 
 import (
 	"fmt"
-	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
-	"gorm.io/gorm"
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
+	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
+	"gorm.io/gorm"
 )
 
 type productRepositoryImpl struct {
