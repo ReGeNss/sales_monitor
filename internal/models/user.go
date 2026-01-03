@@ -6,11 +6,6 @@ type User struct {
 	Password string `gorm:"notNull;column:password;type:varchar(255)"`
 	NFToken  string `gorm:"column:nf_token;type:text"`
 
-	// Тільки необхідні зв'язки / Only necessary associations
 	FavoriteBrands   []Brand   `gorm:"many2many:Favorite_Brand;joinForeignKey:user_id;joinReferences:brand_id"`
 	FavoriteProducts []Product `gorm:"many2many:Favorite_Product;joinForeignKey:user_id;joinReferences:product_id"`
-}
-
-func (User) TableName() string {
-	return "User"
 }

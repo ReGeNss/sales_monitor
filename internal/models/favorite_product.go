@@ -7,7 +7,3 @@ type FavoriteProduct struct {
 	User              User    `gorm:"foreignKey:UserID;references:user_id"`
 	Product           Product `gorm:"foreignKey:ProductID;references:product_id"`
 }
-
-func (FavoriteProduct) TableName() string {
-	return "Favorite_Product"
-}

@@ -19,7 +19,7 @@ CREATE TABLE Brand (
 CREATE TABLE Marketplace (
     marketplace_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) UNIQUE NOT NULL,
-    url TEXT NOT NULL
+    url TEXT UNIQUE NOT NULL
 );
 
 
@@ -40,9 +40,7 @@ CREATE TABLE Price (
     regular_price DECIMAL(10, 2) NOT NULL,
     discount_price DECIMAL(10, 2),
     marketplace_id INT NOT NULL,
-    url TEXT UNIQUE NOT NULL,
-    is_on_sale BOOLEAN DEFAULT FALSE,
-    discount_percent INT DEFAULT 0,
+    url TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_price_product FOREIGN KEY (product_id) REFERENCES Product(product_id),
     CONSTRAINT fk_price_marketplace FOREIGN KEY (marketplace_id) REFERENCES Marketplace(marketplace_id)
