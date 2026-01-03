@@ -5,3 +5,7 @@ type Marketplace struct {
 	Name          string `gorm:"unique;notNull;column:name;type:varchar(255)"`
 	URL           string `gorm:"unique;notNull;column:url;type:text"`
 }
+
+func (Marketplace) TableName() string {
+	return "Marketplace"
+}

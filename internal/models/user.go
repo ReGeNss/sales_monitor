@@ -9,3 +9,7 @@ type User struct {
 	FavoriteBrands   []Brand   `gorm:"many2many:Favorite_Brand;joinForeignKey:user_id;joinReferences:brand_id"`
 	FavoriteProducts []Product `gorm:"many2many:Favorite_Product;joinForeignKey:user_id;joinReferences:product_id"`
 }
+
+func (User) TableName() string {
+	return "User"
+}

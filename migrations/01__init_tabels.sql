@@ -19,7 +19,7 @@ CREATE TABLE Brand (
 CREATE TABLE Marketplace (
     marketplace_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) UNIQUE NOT NULL,
-    url TEXT UNIQUE NOT NULL
+    url TEXT NOT NULL
 );
 
 

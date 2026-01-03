@@ -11,3 +11,8 @@ type ProductAttribute struct {
 	AttributeType      string `gorm:"notNull;column:attribute_type;type:enum('volume', 'weight')"`
 	Value              string `gorm:"notNull;column:value;type:text"`
 }
+
+
+func (ProductAttribute) TableName() string {
+	return "product_attributes"
+}

@@ -7,3 +7,7 @@ type FavoriteBrand struct {
 	User            User  `gorm:"foreignKey:UserID;references:user_id"`
 	Brand           Brand `gorm:"foreignKey:BrandID;references:brand_id"`
 }
+
+func (FavoriteBrand) TableName() string {
+	return "FavoriteBrand"
+}

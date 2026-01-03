@@ -11,3 +11,7 @@ type Price struct {
 	URL             string    `gorm:"notNull;column:url;type:text"`
 	CreatedAt       time.Time `gorm:"column:created_at;default:CURRENT_TIMESTAMP"`
 }
+
+func (Price) TableName() string {
+	return "Price"
+}
