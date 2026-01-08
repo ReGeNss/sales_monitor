@@ -1,20 +1,28 @@
 package repository
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"sales_monitor/internal/models"
+	"sales_monitor/scraper_app/core/api"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
+
 	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
 	"gorm.io/gorm"
 )
 
 type productRepositoryImpl struct {
 	db *gorm.DB
+	httpClient api.HTTPClient
 }
 
-func NewProductRepository(db *gorm.DB) repository.ProductRepository {
+func NewProductRepository(db *gorm.DB, httpClient api.HTTPClient) repository.ProductRepository {
 	return &productRepositoryImpl{
 		db: db,
+		httpClient: httpClient,
 	}
 }
 
@@ -106,17 +114,48 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, attr
 
 	bestSimilarity := 0
 	bestProductID := 0
+	bestProductFingerprint := ""
 
 	for _, product := range products {
 		similarity := fuzzy.TokenSortRatio(fingerprint, product.NameFingerprint)
 		if similarity > bestSimilarity {
 			bestSimilarity = similarity
 			bestProductID = product.ProductID
+			bestProductFingerprint = product.NameFingerprint
 		}
 	}
 
+	log.Println("LLM bestSimilarity", bestSimilarity)
+
 	if bestSimilarity >= 95 {
 		return uint(bestProductID), nil
+	}
+	
+
+	if(bestSimilarity >= 80) {
+		log.Println("CHECK LLM FOR", bestProductFingerprint)
+		response, err := p.httpClient.Post("http://localhost:8000/similarity", map[string]interface{}{
+			"text1": fingerprint,
+			"text2": bestProductFingerprint,
+		})
+		if err != nil {
+			return 0, err
+		}
+		defer response.Body.Close()
+		body, err := io.ReadAll(response.Body)
+
+		var similarityResponse struct {
+			Similarity float64 `json:"similarity"`
+		}
+		err = json.NewDecoder(bytes.NewReader(body)).Decode(&similarityResponse)
+		if err != nil {
+			return 0, err
+		}
+
+		log.Println("CHECK LLM RESULT", similarityResponse.Similarity)
+		if similarityResponse.Similarity >= 0.95 {
+			return uint(bestProductID), nil
+		}
 	}
 
 	return 0, fmt.Errorf("no similar product found")
