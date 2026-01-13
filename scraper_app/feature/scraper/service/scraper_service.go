@@ -1,11 +1,16 @@
 package service
 
 import (
-	"github.com/playwright-community/playwright-go"
+	"fmt"
 	"log"
+	"os"
 	config "sales_monitor/scraper_app/feature/scraper/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
+	"sales_monitor/scraper_app/utils"
+	"time"
+
+	"github.com/playwright-community/playwright-go"
 )
 
 type ScraperService interface {
@@ -64,5 +69,7 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 		}
 	}
 	pw.Stop()
+
+	utils.SaveToJsonFile(&scrapedProducts, fmt.Sprintf("%s/scraped_products_%s.json", os.Getenv("SCRAPED_DATA_FOLDER"), time.Now().Format(time.DateTime)))
 	return scrapedProducts, nil
 }
