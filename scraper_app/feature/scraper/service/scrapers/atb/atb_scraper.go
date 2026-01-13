@@ -13,7 +13,13 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-func AtbScraper(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
+type AtbScraper struct {}
+
+func (s *AtbScraper) GetMarketplaceName() string {
+	return "АТБ"
+}
+
+func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
 	page, err := browser.NewPage()
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)

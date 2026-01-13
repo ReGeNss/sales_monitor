@@ -18,11 +18,11 @@ type ScraperService interface {
 }
 
 type scraperServiceImpl struct {
-	configuration  []config.ScraperConfig
+	configuration  config.ScrapingPlan
 	productService service.ProductService
 }
 
-func NewScraperService(configuration []config.ScraperConfig, productService service.ProductService) ScraperService {
+func NewScraperService(configuration config.ScrapingPlan, productService service.ProductService) ScraperService {
 	return &scraperServiceImpl{
 		configuration:  configuration,
 		productService: productService,
@@ -48,26 +48,28 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 		log.Fatalf("could not launch browser: %v", err)
 	}
 
-	for _, scraperConfig := range s.configuration {
-		for _, scrapingContent := range scraperConfig.ScrapingContent {
-			log.Printf("scraping %s", scrapingContent.URL)
-			products := scraperConfig.ScraperFunction(browser, scrapingContent.URL, scrapingContent.WordsToIgnore)
-			if scrapedProducts[scrapingContent.Category] == nil {
-				scrapedProducts[scrapingContent.Category] = &config.ScrapingResult{
-					ScrapedProducts: []*entity.ScrapedProducts{{
+	for _, scrapingCategory := range s.configuration.Categories {
+		for _, scraperConfig := range scrapingCategory.ScrapersConfigs {
+			for _, url := range scraperConfig.URLs {
+				products := scraperConfig.Scraper.Scrape(browser, url, scrapingCategory.WordsToIgnore)
+				if scrapedProducts[scrapingCategory.Category] == nil {
+					scrapedProducts[scrapingCategory.Category] = &config.ScrapingResult{
+						ScrapedProducts: []*entity.ScrapedProducts{{
+							Products:        products,
+							MarketplaceName: scraperConfig.Scraper.GetMarketplaceName(),
+						}},
+					}
+				} else {
+					scrapedProducts[scrapingCategory.Category].ScrapedProducts = append(scrapedProducts[scrapingCategory.Category].ScrapedProducts, &entity.ScrapedProducts{
 						Products:        products,
-						MarketplaceName: scraperConfig.MarketplaceName,
-					}},
-					ProductDifferentiationEntity: scrapingContent.ProductDifferentiationEntity}
-			} else {
-				scrapedProducts[scrapingContent.Category].ScrapedProducts = append(scrapedProducts[scrapingContent.Category].ScrapedProducts, &entity.ScrapedProducts{
-					Products:        products,
-					MarketplaceName: scraperConfig.MarketplaceName,
-				})
+						MarketplaceName: scraperConfig.Scraper.GetMarketplaceName(),
+					})
+				}
+				log.Printf("found %d products", len(products))
 			}
-			log.Printf("found %d products", len(products))
 		}
 	}
+
 	pw.Stop()
 
 	utils.SaveToJsonFile(&scrapedProducts, fmt.Sprintf("%s/scraped_products_%s.json", os.Getenv("SCRAPED_DATA_FOLDER"), time.Now().Format(time.DateTime)))

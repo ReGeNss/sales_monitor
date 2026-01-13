@@ -10,7 +10,13 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-func SilpoScraper(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
+type SilpoScraper struct {}
+
+func (s *SilpoScraper) GetMarketplaceName() string {
+	return "Сільпо"
+}
+
+func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
 	page, err := browser.NewPage()
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)

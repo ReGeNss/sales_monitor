@@ -6,4 +6,8 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-type Scraper func(context playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct
+type Scraper interface {
+	GetMarketplaceName() string
+	Scrape(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct
+}
+

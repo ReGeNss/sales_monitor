@@ -8,7 +8,13 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-func ForaScraper(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
+type ForaScraper struct {}
+
+func (s *ForaScraper) GetMarketplaceName() string {
+	return "Фора"
+}
+
+func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
 	context, err := browser.NewContext()
 	if err != nil {
 		log.Fatalf("could not create context: %v", err)
