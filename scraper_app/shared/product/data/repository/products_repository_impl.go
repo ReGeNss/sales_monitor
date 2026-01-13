@@ -1,14 +1,12 @@
 package repository
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/core/api"
+	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
+	"sales_monitor/scraper_app/shared/product/utils"
 
 	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
 	"gorm.io/gorm"
@@ -94,7 +92,7 @@ func (p *productRepositoryImpl) CreateProduct(product *models.Product, attribute
 	return uint(product.ProductID), p.db.Error
 }
 
-func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, attributes []*models.ProductAttribute, brandID int, categoryID int) (uint, error) {
+func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (uint, error) {
 	var products []models.Product
 
 	query := p.db.Model(&models.Product{}).Table("Product as p").
@@ -113,49 +111,19 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, attr
 	}
 
 	bestSimilarity := 0
-	bestProductID := 0
-	bestProductFingerprint := ""
+	var bestProduct models.Product
 
 	for _, product := range products {
 		similarity := fuzzy.TokenSortRatio(fingerprint, product.NameFingerprint)
 		if similarity > bestSimilarity {
 			bestSimilarity = similarity
-			bestProductID = product.ProductID
-			bestProductFingerprint = product.NameFingerprint
+			bestProduct = product
 		}
 	}
 
-	log.Println("LLM bestSimilarity", bestSimilarity)
-
-	if bestSimilarity >= 95 {
-		return uint(bestProductID), nil
-	}
-	
-
-	if(bestSimilarity >= 80) {
-		log.Println("CHECK LLM FOR", bestProductFingerprint)
-		response, err := p.httpClient.Post("http://localhost:8000/similarity", map[string]interface{}{
-			"text1": fingerprint,
-			"text2": bestProductFingerprint,
-		})
-		if err != nil {
-			return 0, err
-		}
-		defer response.Body.Close()
-		body, err := io.ReadAll(response.Body)
-
-		var similarityResponse struct {
-			Similarity float64 `json:"similarity"`
-		}
-		err = json.NewDecoder(bytes.NewReader(body)).Decode(&similarityResponse)
-		if err != nil {
-			return 0, err
-		}
-
-		log.Println("CHECK LLM RESULT", similarityResponse.Similarity)
-		if similarityResponse.Similarity >= 0.95 {
-			return uint(bestProductID), nil
-		}
+	fmt.Printf("bestSimilarity: %d, fingerprint: %s, bestProduct.NameFingerprint: %s\n", bestSimilarity, fingerprint, bestProduct.NameFingerprint)
+	if bestSimilarity >= 91 && utils.ProductDifferentiator(fingerprint, bestProduct.NameFingerprint , productDifferentiationEntity) {
+		return uint(bestProduct.ProductID), nil
 	}
 
 	return 0, fmt.Errorf("no similar product found")

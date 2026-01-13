@@ -7,3 +7,5 @@
 .vscode/
 .env
 .DS_Store
+
+.logs/

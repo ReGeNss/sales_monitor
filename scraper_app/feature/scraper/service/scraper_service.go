@@ -1,31 +1,31 @@
-package scraper
+package service
 
 import (
+	"github.com/playwright-community/playwright-go"
 	"log"
+	config "sales_monitor/scraper_app/feature/scraper/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
-
-	"github.com/playwright-community/playwright-go"
 )
 
 type ScraperService interface {
-	Scrape() ([]*entity.ScrapedProducts, error)
+	Scrape() (map[string]*config.ScrapingResult, error)
 }
 
 type scraperServiceImpl struct {
-	configuration  []ScraperConfig
+	configuration  []config.ScraperConfig
 	productService service.ProductService
 }
 
-func NewScraperService(configuration []ScraperConfig, productService service.ProductService) ScraperService {
+func NewScraperService(configuration []config.ScraperConfig, productService service.ProductService) ScraperService {
 	return &scraperServiceImpl{
 		configuration:  configuration,
 		productService: productService,
 	}
 }
 
-func (s *scraperServiceImpl) Scrape() ([]*entity.ScrapedProducts, error) {
-	scrapedProducts := []*entity.ScrapedProducts{}
+func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error) {
+	scrapedProducts := map[string]*config.ScrapingResult{}
 	pw, err := playwright.Run()
 	if err != nil {
 		log.Fatalf("could not start playwright: %v", err)
@@ -47,11 +47,19 @@ func (s *scraperServiceImpl) Scrape() ([]*entity.ScrapedProducts, error) {
 		for _, scrapingContent := range scraperConfig.ScrapingContent {
 			log.Printf("scraping %s", scrapingContent.URL)
 			products := scraperConfig.ScraperFunction(browser, scrapingContent.URL, scrapingContent.WordsToIgnore)
-			scrapedProducts = append(scrapedProducts, &entity.ScrapedProducts{
-				Products:        products,
-				MarketplaceName: scraperConfig.MarketplaceName,
-				Category:        scrapingContent.Category,
-			})
+			if scrapedProducts[scrapingContent.Category] == nil {
+				scrapedProducts[scrapingContent.Category] = &config.ScrapingResult{
+					ScrapedProducts: []*entity.ScrapedProducts{{
+						Products:        products,
+						MarketplaceName: scraperConfig.MarketplaceName,
+					}},
+					ProductDifferentiationEntity: scrapingContent.ProductDifferentiationEntity}
+			} else {
+				scrapedProducts[scrapingContent.Category].ScrapedProducts = append(scrapedProducts[scrapingContent.Category].ScrapedProducts, &entity.ScrapedProducts{
+					Products:        products,
+					MarketplaceName: scraperConfig.MarketplaceName,
+				})
+			}
 			log.Printf("found %d products", len(products))
 		}
 	}

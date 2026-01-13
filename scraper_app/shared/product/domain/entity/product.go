@@ -9,7 +9,6 @@ import (
 
 type ScrapedProducts struct {
 	Products []*ScrapedProduct
-	Category string
 	MarketplaceName string
 }
 

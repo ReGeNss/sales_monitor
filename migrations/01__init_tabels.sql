@@ -25,7 +25,7 @@ CREATE TABLE Marketplace (
 
 CREATE TABLE Product (
     product_id INT AUTO_INCREMENT PRIMARY KEY,
-    name_fingerprint VARCHAR(255) NOT NULL,
+    name_fingerprint VARCHAR(255) NOT NULL CHECK (name_fingerprint <> ''),
     brand_id INT NOT NULL,
     name VARCHAR(255) NOT NULL,
     category_id INT NOT NULL,

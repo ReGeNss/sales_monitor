@@ -3,6 +3,7 @@ package service
 import (
 	"log"
 	"sales_monitor/internal/models"
+	scraper "sales_monitor/scraper_app/feature/scraper/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	"sales_monitor/scraper_app/shared/product/utils"
@@ -10,7 +11,7 @@ import (
 )
 
 type ProductService interface {
-	ProcessProducts(scrapedData []*entity.ScrapedProducts)
+	ProcessProducts(map[string]*scraper.ScrapingResult)
 }
 
 type productServiceImpl struct {
@@ -23,29 +24,14 @@ func NewProductService(productRepository repository.ProductRepository) ProductSe
 	}
 }
 
-func (s *productServiceImpl) ProcessProducts(scrapedData []*entity.ScrapedProducts) {
-	for _, data := range scrapedData {
-		if len(data.Products) == 0 {
-			continue
-		}
-
-		var marketplaceID int
-		marketplace, err := s.productRepository.GetMarketplaceByName(data.MarketplaceName)
-		if err != nil {
-			marketplace = &models.Marketplace{
-				Name: data.MarketplaceName,
-			}
-			s.productRepository.CreateMarketplace(marketplace)
-			marketplaceID = marketplace.MarketplaceID
-		} else {
-			marketplaceID = marketplace.MarketplaceID
-		}
+func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.ScrapingResult) {
+	for categoryName, scrapedData := range scrapedData {
 
 		var categoryID int
-		category, err := s.productRepository.GetCategoryByName(data.Category)
+		category, err := s.productRepository.GetCategoryByName(categoryName)
 		if err != nil {
 			category = &models.Category{
-				Name: data.Category,
+				Name: categoryName,
 			}
 			s.productRepository.CreateCategory(category)
 			categoryID = category.CategoryID
@@ -53,86 +39,104 @@ func (s *productServiceImpl) ProcessProducts(scrapedData []*entity.ScrapedProduc
 			categoryID = category.CategoryID
 		}
 
-		brandProducts, unknownBrandProducts := groupProductsByBrand(data.Products)
-
-		if(len(unknownBrandProducts) > 0) {
-			allBrands, err := s.productRepository.GetAllBrands()
-			if err != nil {
-				log.Printf("could not get all brands: %v", err)
+		for _, data := range scrapedData.ScrapedProducts {
+			if len(data.Products) == 0 {
 				continue
 			}
-			brandProducts = getBrandsFromProductName(unknownBrandProducts, brandProducts, allBrands)
-			
-		}
 
-		for brandName, products := range brandProducts {
-			var brandID int
-			brand, err := s.productRepository.GetBrandByName(brandName)
+			var marketplaceID int
+			marketplace, err := s.productRepository.GetMarketplaceByName(data.MarketplaceName)
 			if err != nil {
-				id, err := s.productRepository.CreateBrand(&models.Brand{
-					Name: brandName,
-				})
-				if err != nil {
-					log.Printf("could not create brand: %v", err)
-					continue
+				marketplace = &models.Marketplace{
+					Name: data.MarketplaceName,
 				}
-				brandID = int(id)
+				s.productRepository.CreateMarketplace(marketplace)
+				marketplaceID = marketplace.MarketplaceID
 			} else {
-				brandID = brand.BrandID
+				marketplaceID = marketplace.MarketplaceID
 			}
 
-			for _, product := range products {
-				fingerprint := utils.NormalizeProductName(product.Name, []string{brandName, data.Category})
-				attributes := []*models.ProductAttribute{}
+			brandProducts, unknownBrandProducts := groupProductsByBrand(data.Products)
 
-				if product.Volume != "" {
-					attributes = append(attributes, &models.ProductAttribute{
-						AttributeType: models.VOLUME,
-						Value:         product.Volume,
-					})
-				}
-				if product.Weight != "" {
-					attributes = append(attributes, &models.ProductAttribute{
-						AttributeType: models.WEIGHT,
-						Value:         product.Weight,
-					})
-				}
-
-				var productID int
-
-				existingProduct, err := s.productRepository.GetProductByFingerprint(fingerprint, brandID, categoryID, attributes)
-
+			if len(unknownBrandProducts) > 0 {
+				allBrands, err := s.productRepository.GetAllBrands()
 				if err != nil {
-					matchedProductID, err := s.productRepository.GetMostSimilarProductID(fingerprint, attributes, brandID, categoryID)
+					log.Printf("could not get all brands: %v", err)
+					continue
+				}
+				brandProducts = getBrandsFromProductName(unknownBrandProducts, brandProducts, allBrands)
+
+			}
+
+			for brandName, products := range brandProducts {
+				var brandID int
+				brand, err := s.productRepository.GetBrandByName(brandName)
+				if err != nil {
+					id, err := s.productRepository.CreateBrand(&models.Brand{
+						Name: brandName,
+					})
 					if err != nil {
-
-						id, err := s.productRepository.CreateProduct(&models.Product{
-							Name:            product.Name,
-							NameFingerprint: fingerprint,
-							ImageURL:        product.Image,
-							BrandID:         brandID,
-							CategoryID:      categoryID,
-						}, attributes)
-
-						if err != nil {
-							log.Printf("could not create product: %v", err)
-							continue
-						}
-						productID = int(id)
-					} else {
-						productID = int(matchedProductID)
+						log.Printf("could not create brand: %v", err)
+						continue
 					}
+					brandID = int(id)
 				} else {
-					productID = existingProduct.ProductID
+					brandID = brand.BrandID
 				}
 
-				s.productRepository.AddPriceToProduct(&models.Price{
-					ProductID:     productID,
-					MarketplaceID: marketplaceID,
-					RegularPrice:  product.RegularPrice,
-					DiscountPrice: &product.DiscountedPrice,
-					URL:           product.URL,
-				})
+				for _, product := range products {
+					fingerprint := utils.NormalizeProductName(product.Name, []string{brandName, categoryName})
+					attributes := []*models.ProductAttribute{}
+
+					if product.Volume != "" {
+						attributes = append(attributes, &models.ProductAttribute{
+							AttributeType: models.VOLUME,
+							Value:         product.Volume,
+						})
+					}
+					if product.Weight != "" {
+						attributes = append(attributes, &models.ProductAttribute{
+							AttributeType: models.WEIGHT,
+							Value:         product.Weight,
+						})
+					}
+
+					var productID int
+
+					existingProduct, err := s.productRepository.GetProductByFingerprint(fingerprint, brandID, categoryID, attributes)
+
+					if err != nil {
+						matchedProductID, err := s.productRepository.GetMostSimilarProductID(fingerprint, attributes, scrapedData.ProductDifferentiationEntity, brandID, categoryID, marketplaceID)
+						if err != nil {
+
+							id, err := s.productRepository.CreateProduct(&models.Product{
+								Name:            product.Name,
+								NameFingerprint: fingerprint,
+								ImageURL:        product.Image,
+								BrandID:         brandID,
+								CategoryID:      categoryID,
+							}, attributes)
+
+							if err != nil {
+								log.Printf("could not create product: %v", err)
+								continue
+							}
+							productID = int(id)
+						} else {
+							productID = int(matchedProductID)
+						}
+					} else {
+						productID = existingProduct.ProductID
+					}
+
+					s.productRepository.AddPriceToProduct(&models.Price{
+						ProductID:     productID,
+						MarketplaceID: marketplaceID,
+						RegularPrice:  product.RegularPrice,
+						DiscountPrice: &product.DiscountedPrice,
+						URL:           product.URL,
+					})
+				}
 			}
 		}
 	}

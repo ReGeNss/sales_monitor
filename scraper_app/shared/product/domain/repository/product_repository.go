@@ -2,11 +2,12 @@ package repository
 
 import (
 	"sales_monitor/internal/models"
+	"sales_monitor/scraper_app/shared/product/domain/entity"
 )
 
 type ProductRepository interface {
 	GetProductByFingerprint(fingerprint string, brandID int, categoryID int, attributes []*models.ProductAttribute) (*models.Product, error)
-	GetMostSimilarProductID(fingerprint string, attributes []*models.ProductAttribute, brandID int, categoryID int) (uint, error)
+	GetMostSimilarProductID(fingerprint string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (uint, error)
 	CreateProduct(product *models.Product, attributes []*models.ProductAttribute) (uint,error)
 	AddPriceToProduct(price *models.Price) error
 
