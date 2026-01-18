@@ -6,13 +6,12 @@ const (
 )
 
 type ProductAttribute struct {
-	ProductAttributeID int `gorm:"primaryKey;column:product_attribute_id;autoIncrement"`
-	ProductID          int `gorm:"notNull;column:product_id"`
-	AttributeType      string `gorm:"notNull;column:attribute_type;type:enum('volume', 'weight')"`
-	Value              string `gorm:"notNull;column:value;type:text"`
+	AttributeID   int       `gorm:"primaryKey;column:attribute_id;autoIncrement"`
+	AttributeType string    `gorm:"notNull;column:attribute_type;type:enum('volume', 'weight')"`
+	Value         string    `gorm:"notNull;column:value;type:text"`
+	Products      []Product `gorm:"many2many:product_attributes;joinForeignKey:product_id;joinReferences:attribute_id"`
 }
 
-
 func (ProductAttribute) TableName() string {
-	return "product_attributes"
+	return "attributes"
 }

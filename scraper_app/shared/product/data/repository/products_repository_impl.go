@@ -13,13 +13,13 @@ import (
 )
 
 type productRepositoryImpl struct {
-	db *gorm.DB
+	db         *gorm.DB
 	httpClient api.HTTPClient
 }
 
 func NewProductRepository(db *gorm.DB, httpClient api.HTTPClient) repository.ProductRepository {
 	return &productRepositoryImpl{
-		db: db,
+		db:         db,
 		httpClient: httpClient,
 	}
 }
@@ -74,14 +74,33 @@ func (p *productRepositoryImpl) AddPriceToProduct(price *models.Price) error {
 }
 
 func (p *productRepositoryImpl) CreateProduct(product *models.Product, attributes []*models.ProductAttribute) (uint, error) {
-	p.db.Model(&models.Product{}).Transaction(func(tx *gorm.DB) error {
+	var productAttributes []models.ProductAttribute
+
+	err := p.db.Model(&models.Product{}).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.Product{}).Create(product).Error; err != nil {
 			return err
 		}
 
-		for _, attribute := range attributes {
-			attribute.ProductID = product.ProductID
-			if err := tx.Model(&models.ProductAttribute{}).Create(attribute).Error; err != nil {
+		for _, attr := range attributes {
+			var existingAttr models.ProductAttribute
+			err := tx.Model(&models.ProductAttribute{}).
+				Where("attribute_type = ? AND value = ?", attr.AttributeType, attr.Value).
+				First(&existingAttr).Error
+
+			if err == gorm.ErrRecordNotFound {
+				if err := tx.Model(&models.ProductAttribute{}).Create(attr).Error; err != nil {
+					return err
+				}
+				productAttributes = append(productAttributes, *attr)
+			} else if err != nil {
+				return err
+			} else {
+				productAttributes = append(productAttributes, existingAttr)
+			}
+		}
+
+		if len(productAttributes) > 0 {
+			if err := tx.Model(product).Association("Attributes").Append(productAttributes); err != nil {
 				return err
 			}
 		}
@@ -89,7 +108,7 @@ func (p *productRepositoryImpl) CreateProduct(product *models.Product, attribute
 		return nil
 	})
 
-	return uint(product.ProductID), p.db.Error
+	return uint(product.ProductID), err
 }
 
 func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (uint, error) {
@@ -122,7 +141,7 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, attr
 	}
 
 	fmt.Printf("bestSimilarity: %d, fingerprint: %s, bestProduct.NameFingerprint: %s\n", bestSimilarity, fingerprint, bestProduct.NameFingerprint)
-	if bestSimilarity >= 91 && utils.ProductDifferentiator(fingerprint, bestProduct.NameFingerprint , productDifferentiationEntity) {
+	if bestSimilarity >= 91 && utils.ProductDifferentiator(fingerprint, bestProduct.NameFingerprint, productDifferentiationEntity) {
 		return uint(bestProduct.ProductID), nil
 	}
 
@@ -146,7 +165,8 @@ func (p *productRepositoryImpl) CreateProductAttribute(attribute *models.Product
 
 func attributesToQuery(attributes []*models.ProductAttribute, query *gorm.DB) *gorm.DB {
 	for i, attribute := range attributes {
-		query = query.Joins(fmt.Sprintf("JOIN product_attributes attr%[1]d ON attr%[1]d.product_id = p.product_id", i)).
+		query = query.Joins(fmt.Sprintf("JOIN product_attributes pa%[1]d ON pa%[1]d.product_id = p.product_id", i)).
+			Joins(fmt.Sprintf("JOIN attributes attr%[1]d ON attr%[1]d.attribute_id = pa%[1]d.attribute_id", i)).
 			Where(fmt.Sprintf("attr%[1]d.attribute_type = ? AND attr%[1]d.value = ?", i),
 				attribute.AttributeType,
 				attribute.Value,
