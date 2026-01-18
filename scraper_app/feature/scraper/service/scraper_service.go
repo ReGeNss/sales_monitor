@@ -8,6 +8,7 @@ import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
 	"sales_monitor/scraper_app/utils"
+	"strings"
 	"time"
 
 	"github.com/playwright-community/playwright-go"
@@ -72,6 +73,18 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 
 	pw.Stop()
 
-	utils.SaveToJsonFile(&scrapedProducts, fmt.Sprintf("%s/scraped_products_%s.json", os.Getenv("SCRAPED_DATA_FOLDER"), time.Now().Format(time.DateTime)))
+	scrapedCategories := []string{}
+	for _, category := range s.configuration.Categories {
+		scrapedCategories = append(scrapedCategories, category.Category)
+	}
+
+	utils.SaveToJsonFile(
+		&scrapedProducts, 
+		fmt.Sprintf("%s/scraped_%s_%s.json", 
+			os.Getenv("SCRAPED_DATA_FOLDER"),
+			strings.Join(scrapedCategories, " "),
+			time.Now().Format(time.DateTime)),
+	)
+	fmt.Printf("scraped %d products GOOOL ___________\n", len(scrapedProducts))
 	return scrapedProducts, nil
 }
