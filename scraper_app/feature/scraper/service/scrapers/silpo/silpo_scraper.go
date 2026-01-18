@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sales_monitor/scraper_app/feature/scraper/utils"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"strings"
 	"time"
 )
@@ -16,7 +17,7 @@ func (s *SilpoScraper) GetMarketplaceName() string {
 	return "Сільпо"
 }
 
-func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
+func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts []*scraper_config.LaterScrapedProducts) []*entity.ScrapedProduct {
 	page, err := browser.NewPage()
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)

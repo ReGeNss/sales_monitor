@@ -4,6 +4,7 @@ import (
 	"log"
 	"sales_monitor/scraper_app/feature/scraper/utils"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"strings"
 	"github.com/playwright-community/playwright-go"
 )
@@ -14,7 +15,7 @@ func (s *ForaScraper) GetMarketplaceName() string {
 	return "Фора"
 }
 
-func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
+func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts []*scraper_config.LaterScrapedProducts) []*entity.ScrapedProduct {
 	context, err := browser.NewContext()
 	if err != nil {
 		log.Fatalf("could not create context: %v", err)

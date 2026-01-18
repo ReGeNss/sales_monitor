@@ -6,6 +6,7 @@ import (
 	"math"
 	"regexp"
 	"sales_monitor/scraper_app/feature/scraper/utils"
+	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strconv"
 	"strings"
@@ -19,7 +20,7 @@ func (s *AtbScraper) GetMarketplaceName() string {
 	return "АТБ"
 }
 
-func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string) []*entity.ScrapedProduct {
+func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts []*scraper_config.LaterScrapedProducts) []*entity.ScrapedProduct {
 	page, err := browser.NewPage()
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)

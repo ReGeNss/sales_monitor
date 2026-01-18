@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	config "sales_monitor/scraper_app/feature/scraper/entity"
+	config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
 	"sales_monitor/scraper_app/utils"
@@ -21,12 +21,18 @@ type ScraperService interface {
 type scraperServiceImpl struct {
 	configuration  config.ScrapingPlan
 	productService service.ProductService
+	cachedScrapedProductService CachedScrapedProductService
 }
 
-func NewScraperService(configuration config.ScrapingPlan, productService service.ProductService) ScraperService {
+func NewScraperService(
+	configuration config.ScrapingPlan, 
+	productService service.ProductService, 
+	cachedScrapedProductService CachedScrapedProductService,
+	) ScraperService {
 	return &scraperServiceImpl{
 		configuration:  configuration,
 		productService: productService,
+		cachedScrapedProductService: cachedScrapedProductService,
 	}
 }
 
@@ -52,7 +58,19 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 	for _, scrapingCategory := range s.configuration.Categories {
 		for _, scraperConfig := range scrapingCategory.ScrapersConfigs {
 			for _, url := range scraperConfig.URLs {
-				products := scraperConfig.Scraper.Scrape(browser, url, scrapingCategory.WordsToIgnore)
+				cachedProducts, err := s.cachedScrapedProductService.GetCachedScrapedProducts(scraperConfig.Scraper.GetMarketplaceName(), scrapingCategory.Category)
+				if err != nil {
+					log.Printf("error getting cached scraped products: %v", err)
+					cachedProducts = nil
+				}
+				
+				products := scraperConfig.Scraper.Scrape(
+					browser, 
+					url, 
+					scrapingCategory.WordsToIgnore, 
+					cachedProducts,
+				)
+
 				if scrapedProducts[scrapingCategory.Category] == nil {
 					scrapedProducts[scrapingCategory.Category] = &config.ScrapingResult{
 						ScrapedProducts: []*entity.ScrapedProducts{{

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/core/api"
+	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	"sales_monitor/scraper_app/shared/product/utils"
@@ -182,4 +183,28 @@ func (p *productRepositoryImpl) GetAllBrands() ([]models.Brand, error) {
 		return nil, err
 	}
 	return brands, nil
+}
+
+func (p *productRepositoryImpl) GetLaterScrapedProducts(marketplace string, category string) ([]*scraper_config.LaterScrapedProducts, error) {
+	var laterScrapedProducts []*scraper_config.LaterScrapedProducts
+
+	err := p.db.Transaction(func(tx *gorm.DB) error {
+		marketplaceID, err := p.GetMarketplaceByName(marketplace)
+		if err != nil {
+			return err
+		}
+		categoryID, err := p.GetCategoryByName(category)
+		if err != nil {
+			return err
+		}
+		
+		err = tx.Model(&models.Price{}).Where("marketplace_id = ? AND category_id = ?", marketplaceID, categoryID).Find(&laterScrapedProducts).Error
+		return err
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return laterScrapedProducts, nil
 }

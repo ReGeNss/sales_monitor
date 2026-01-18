@@ -17,3 +17,9 @@ type ScraperConfig struct {
 	URLs            []string
 	Scraper         Scraper
 }
+
+type LaterScrapedProducts struct {
+	CurrentPrice float64
+	DiscountedPrice float64
+	URL string
+}

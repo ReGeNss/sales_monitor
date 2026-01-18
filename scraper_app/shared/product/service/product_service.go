@@ -3,7 +3,7 @@ package service
 import (
 	"log"
 	"sales_monitor/internal/models"
-	scraper "sales_monitor/scraper_app/feature/scraper/entity"
+	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	"sales_monitor/scraper_app/shared/product/utils"
