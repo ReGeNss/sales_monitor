@@ -13,7 +13,7 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-type AtbScraper struct {}
+type AtbScraper struct{}
 
 func (s *AtbScraper) GetMarketplaceName() string {
 	return "АТБ"
@@ -43,27 +43,28 @@ func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnor
 		page.Goto(url)
 		page.WaitForLoadState()
 	}
-	
+
 	products = append(products, getProducts(page, wordsToIgnore)...)
 	page.Close()
 
 	productsWithBrand := []*entity.ScrapedProduct{}
 	for _, product := range products {
-		page, err = browser.NewPage()
-		if err != nil {
-			log.Fatalf("could not create page: %v", err)
-		}
+		(func() {
+			page, err = browser.NewPage()
+			if err != nil {
+				log.Fatalf("could not create page: %v", err)
+			}
+			defer page.Close()
+			page.Goto(product.URL)
+			page.WaitForLoadState()
 
-		page.Goto(product.URL)
-		page.WaitForLoadState()
-
-		product, err = getProductDetails(page, product)
-		if err != nil {
-			log.Printf("could not get product brand: %v", err)
-			continue
-		}
-		productsWithBrand = append(productsWithBrand, product)
-		page.Close()
+			product, err = getProductDetails(page, product)
+			if err != nil {
+				log.Printf("could not get product brand: %v", err)
+				return
+			}
+			productsWithBrand = append(productsWithBrand, product)
+		})()
 	}
 
 	return productsWithBrand
@@ -127,7 +128,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 			log.Printf("could not get title, skipping item: %v", err)
 			continue
 		}
-		
+
 		title = utils.ReplaceIgnoredWords(title, wordsToIgnore)
 
 		imgElement := item.Locator(".catalog-item__img")
@@ -147,7 +148,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 			currentPrice,
 			oldPrice,
 			imgSrc,
-			"https://www.atbmarket.com" + productLink,
+			"https://www.atbmarket.com"+productLink,
 		)
 
 		products = append(products, product)
@@ -156,7 +157,6 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 
 	return products
 }
-
 
 func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
 	brandElement, err := page.Locator(".product-characteristics__item").All()

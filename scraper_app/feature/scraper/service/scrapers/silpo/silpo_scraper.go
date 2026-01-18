@@ -1,16 +1,16 @@
 package silpo
 
 import (
+	"github.com/playwright-community/playwright-go"
 	"log"
 	"regexp"
 	"sales_monitor/scraper_app/feature/scraper/utils"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
 	"time"
-	"github.com/playwright-community/playwright-go"
 )
 
-type SilpoScraper struct {}
+type SilpoScraper struct{}
 
 func (s *SilpoScraper) GetMarketplaceName() string {
 	return "Сільпо"
@@ -71,26 +71,27 @@ func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgn
 	}
 
 	products := getProducts(page, wordsToIgnore)
+	page.Close()
 
 	productsWithBrand := []*entity.ScrapedProduct{}
 
 	for _, product := range products {
-		page, err = browser.NewPage()
-		if err != nil {
-			log.Fatalf("could not create page: %v", err)
-		}
+		(func() {
+			page, err = browser.NewPage()
+			if err != nil {
+				log.Fatalf("could not create page: %v", err)
+			}
+			defer page.Close()
+			page.Goto(product.URL)
+			page.WaitForLoadState()
 
-		page.Goto(product.URL)
-		page.WaitForLoadState()
-
-		product, err = getProductDetails(page, product)
-		if err != nil {
-			log.Printf("could not get product brand: %v", err)
-			page.Close()
-			continue
-		}
-		productsWithBrand = append(productsWithBrand, product)
-		page.Close()
+			product, err = getProductDetails(page, product)
+			if err != nil {
+				log.Printf("could not get product brand: %v", err)
+				return
+			}
+			productsWithBrand = append(productsWithBrand, product)
+		})()
 	}
 
 	return productsWithBrand
@@ -200,7 +201,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 			currentPrice,
 			oldPrice,
 			imgSrc,
-			"https://silpo.ua" + url,
+			"https://silpo.ua"+url,
 		)
 
 		products = append(products, product)
@@ -208,7 +209,6 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 
 	return products
 }
-
 
 func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
 	title, err := page.Locator("h1").TextContent()
@@ -219,7 +219,7 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 
 	re := regexp.MustCompile(`[\d|\,|\.]+[А-я-a-z|\s]+$`)
 	amount := re.FindAllString(strings.TrimSpace(title), -1)
-		if len(amount) == 0 || len(amount[len(amount)-1]) == 0 {
+	if len(amount) == 0 || len(amount[len(amount)-1]) == 0 {
 		log.Printf("could not get amount: %v", err)
 		return nil, err
 	}
@@ -235,7 +235,7 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 		log.Printf("could not get brand: %v", err)
 	}
 
-	for _, item := range descriptions {	
+	for _, item := range descriptions {
 		textContent, err := item.TextContent()
 		if err != nil {
 			log.Printf("could not get text content: %v", err)
@@ -249,9 +249,9 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 			for _, attribute := range description {
 				attributeTitle, _ := attribute.Locator("[data-autotestid='product-attributes-list-block-title']").TextContent()
 
-				if  strings.TrimSpace(attributeTitle) == "Торгова марка" { 
+				if strings.TrimSpace(attributeTitle) == "Торгова марка" {
 					attributeValue, err := attribute.Locator(".attributes-list_block-value").TextContent()
-					if err != nil { 
+					if err != nil {
 						return nil, err
 					}
 					product.BrandName = strings.TrimSpace(attributeValue)
@@ -259,7 +259,7 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 				}
 			}
 		}
-		
+
 	}
 	return nil, err
 }

@@ -38,24 +38,27 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgno
 	}
 
 	products := getProducts(page, wordsToIgnore)
-
+	page.Close()
+	
 	productsWithBrand := []*entity.ScrapedProduct{}
 	for _, product := range products {
-		page, err = browser.NewPage()
-		if err != nil {
-			log.Fatalf("could not create page: %v", err)
-		}
-
-		page.Goto(product.URL)
-		page.WaitForLoadState()
-
-		product, err = getProductBrand(page, product)
-		if err != nil {
-			log.Printf("could not get product brand: %v", err)
-			continue
-		}
-		productsWithBrand = append(productsWithBrand, product)
-		page.Close()
+		(func() {
+			page, err = browser.NewPage()
+			if err != nil {
+				log.Fatalf("could not create page: %v", err)
+			}
+	
+			page.Goto(product.URL)
+			defer page.Close()
+			page.WaitForLoadState()
+	
+			product, err = getProductBrand(page, product)
+			if err != nil {
+				log.Printf("could not get product brand: %v", err)
+				return
+			}
+			productsWithBrand = append(productsWithBrand, product)
+		})()
 	}
 
 	return productsWithBrand
