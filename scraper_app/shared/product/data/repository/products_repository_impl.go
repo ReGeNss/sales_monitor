@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/core/api"
-	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	"sales_monitor/scraper_app/shared/product/utils"
@@ -112,7 +111,7 @@ func (p *productRepositoryImpl) CreateProduct(product *models.Product, attribute
 	return uint(product.ProductID), err
 }
 
-func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (uint, error) {
+func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint *string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (uint, error) {
 	var products []models.Product
 
 	query := p.db.Model(&models.Product{}).Table("Product as p").
@@ -121,8 +120,18 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, attr
 
 	query = attributesToQuery(attributes, query)
 
-	err := query.Where("MATCH(p.name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0", fingerprint).
-		Order(fmt.Sprintf("MATCH(p.name_fingerprint) AGAINST('%s' IN NATURAL LANGUAGE MODE) DESC", fingerprint)).
+	if fingerprint == nil {
+		var product models.Product
+		err := query.Where("p.name_fingerprint IS NULL").First(&product).Error
+
+		if err != nil {
+			return 0, err
+		}
+		return uint(product.ProductID), nil
+	}
+	
+	err := query.Where("MATCH(p.name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0", *fingerprint).
+		Order(fmt.Sprintf("MATCH(p.name_fingerprint) AGAINST('%s' IN NATURAL LANGUAGE MODE) DESC", *fingerprint)).
 		Limit(4).
 		Find(&products).Error
 
@@ -134,22 +143,21 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint string, attr
 	var bestProduct models.Product
 
 	for _, product := range products {
-		similarity := fuzzy.TokenSortRatio(fingerprint, product.NameFingerprint)
+		similarity := fuzzy.TokenSortRatio(*fingerprint, *product.NameFingerprint)
 		if similarity > bestSimilarity {
 			bestSimilarity = similarity
 			bestProduct = product
 		}
 	}
 
-	fmt.Printf("bestSimilarity: %d, fingerprint: %s, bestProduct.NameFingerprint: %s\n", bestSimilarity, fingerprint, bestProduct.NameFingerprint)
-	if bestSimilarity >= 91 && utils.ProductDifferentiator(fingerprint, bestProduct.NameFingerprint, productDifferentiationEntity) {
+	if bestSimilarity >= 91 && utils.ProductDifferentiator(*fingerprint, *bestProduct.NameFingerprint, productDifferentiationEntity) {
 		return uint(bestProduct.ProductID), nil
 	}
 
 	return 0, fmt.Errorf("no similar product found")
 }
 
-func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint string, brandID int, categoryID int, attributes []*models.ProductAttribute) (*models.Product, error) {
+func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint *string, brandID int, categoryID int, attributes []*models.ProductAttribute) (*models.Product, error) {
 	var product models.Product
 	query := p.db.Model(&models.Product{}).Table("Product as p").Where("p.name_fingerprint = ? AND p.brand_id = ? AND p.category_id = ?", fingerprint, brandID, categoryID)
 	query = attributesToQuery(attributes, query)
@@ -185,26 +193,16 @@ func (p *productRepositoryImpl) GetAllBrands() ([]models.Brand, error) {
 	return brands, nil
 }
 
-func (p *productRepositoryImpl) GetLaterScrapedProducts(marketplace string, category string) ([]*scraper_config.LaterScrapedProducts, error) {
-	var laterScrapedProducts []*scraper_config.LaterScrapedProducts
-
-	err := p.db.Transaction(func(tx *gorm.DB) error {
-		marketplaceID, err := p.GetMarketplaceByName(marketplace)
-		if err != nil {
-			return err
-		}
-		categoryID, err := p.GetCategoryByName(category)
-		if err != nil {
-			return err
-		}
-		
-		err = tx.Model(&models.Price{}).Where("marketplace_id = ? AND category_id = ?", marketplaceID, categoryID).Find(&laterScrapedProducts).Error
-		return err
-	})
-
+func (p *productRepositoryImpl) GetLaterScrapedProducts(brandID int) (entity.LaterScrapedProductsUrls, error) {
+	var prices []models.Price
+	err := p.db.Model(&models.Price{}).Table("Price as prc").Joins("JOIN Product p ON p.product_id = prc.product_id").Where("p.brand_id = ?", brandID).Find(&prices).Error
 	if err != nil {
 		return nil, err
 	}
 
-	return laterScrapedProducts, nil
+	laterScrapedProductsUrls := make(entity.LaterScrapedProductsUrls)
+	for _, price := range prices {
+		laterScrapedProductsUrls[price.URL] = price.ProductID
+	}
+	return laterScrapedProductsUrls, nil
 }

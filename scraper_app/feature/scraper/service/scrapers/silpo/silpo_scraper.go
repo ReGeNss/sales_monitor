@@ -4,9 +4,9 @@ import (
 	"github.com/playwright-community/playwright-go"
 	"log"
 	"regexp"
+	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/utils"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
-	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"strings"
 	"time"
 )
@@ -17,7 +17,7 @@ func (s *SilpoScraper) GetMarketplaceName() string {
 	return "Сільпо"
 }
 
-func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts []*scraper_config.LaterScrapedProducts) []*entity.ScrapedProduct {
+func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts *scraper_config.LaterScrapedProducts) []*entity.ScrapedProduct {
 	page, err := browser.NewPage()
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
@@ -77,6 +77,16 @@ func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgn
 	productsWithBrand := []*entity.ScrapedProduct{}
 
 	for _, product := range products {
+		if cachedProducts != nil {
+			cachedProduct, ok := (*cachedProducts)[product.URL]
+			if ok {
+				if utils.CheckForProductUpdate(&cachedProduct, product) {
+					continue
+				}
+				continue
+			}
+		}
+
 		(func() {
 			page, err = browser.NewPage()
 			if err != nil {

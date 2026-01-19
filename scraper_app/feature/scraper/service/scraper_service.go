@@ -63,7 +63,7 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 					log.Printf("error getting cached scraped products: %v", err)
 					cachedProducts = nil
 				}
-				
+
 				products := scraperConfig.Scraper.Scrape(
 					browser, 
 					url, 
@@ -77,6 +77,8 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 							Products:        products,
 							MarketplaceName: scraperConfig.Scraper.GetMarketplaceName(),
 						}},
+						WordsToIgnore: scrapingCategory.WordsToIgnore,
+						ProductDifferentiationEntity: scrapingCategory.ProductDifferentiationEntity,
 					}
 				} else {
 					scrapedProducts[scrapingCategory.Category].ScrapedProducts = append(scrapedProducts[scrapingCategory.Category].ScrapedProducts, &entity.ScrapedProducts{

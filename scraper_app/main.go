@@ -2,15 +2,15 @@ package main
 
 import (
 	// "encoding/json"
-	"log"
 	// "os"
+	"log"
 	"sales_monitor/internal/db"
 	"sales_monitor/scraper_app/core/api"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	scraper_service "sales_monitor/scraper_app/feature/scraper/service"
 	"sales_monitor/scraper_app/feature/scraper/service/scrapers/atb"
-	"sales_monitor/scraper_app/feature/scraper/service/scrapers/fora"
-	"sales_monitor/scraper_app/feature/scraper/service/scrapers/silpo"
+	// "sales_monitor/scraper_app/feature/scraper/service/scrapers/fora"
+	// "sales_monitor/scraper_app/feature/scraper/service/scrapers/silpo"
 	"sales_monitor/scraper_app/shared/product/data/repository"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
@@ -73,49 +73,49 @@ func main() {
 							URLs:    []string{"https://www.atbmarket.com/catalog/307-napoi"},
 							Scraper: &atb.AtbScraper{},
 						},
-						{
-							URLs:    []string{"https://fora.ua/category/solodka-voda-2483"},
-							Scraper: &fora.ForaScraper{},
-						},
-						{
-							URLs: []string{
-								"https://silpo.ua/category/solodka-voda-gazovana-5095/f/brand=coca-cola",
-								"https://silpo.ua/category/solodka-voda-gazovana-5095/f/brand=pepsi",
-								"https://silpo.ua/category/solodka-voda-gazovana-5095/f/brand=sprite",
-							},
-							Scraper: &silpo.SilpoScraper{},
-						},
+						// {
+						// 	URLs:    []string{"https://fora.ua/category/solodka-voda-2483"},
+						// 	Scraper: &fora.ForaScraper{},
+						// },
+						// {
+						// 	URLs: []string{
+						// 		// "https://silpo.ua/category/solodka-voda-gazovana-5095/f/brand=coca-cola",
+						// 		// "https://silpo.ua/category/solodka-voda-gazovana-5095/f/brand=pepsi",
+						// 		"https://silpo.ua/category/solodka-voda-gazovana-5095/f/brand=sprite",
+						// 	},
+						// 	Scraper: &silpo.SilpoScraper{},
+						// },
 					},
 				},
-				{
-					Category:      "Cоки, нектари",
-					WordsToIgnore: []string{},
-					ProductDifferentiationEntity: &entity.ProductDifferentiationEntity{
-						Elements: [][]string{
-							{"сік"},
-							{"нектар"},
-						},
-					},
-					ScrapersConfigs: []scraper.ScraperConfig{
-						{
-							URLs:    []string{"https://www.atbmarket.com/catalog/324-soki-nektari"},
-							Scraper: &atb.AtbScraper{},
-						},
-						{
-							URLs: []string{
-								"https://fora.ua/category/nektary-2489",
-								"https://fora.ua/category/soky-2490",
-							},
-							Scraper: &fora.ForaScraper{},
-						},
-						{
-							URLs: []string{
-								"https://silpo.ua/category/soki-nektari-5096",
-							},
-							Scraper: &silpo.SilpoScraper{},
-						},
-					},
-				},
+				// {
+				// 	Category:      "Cоки, нектари",
+				// 	WordsToIgnore: []string{},
+				// 	ProductDifferentiationEntity: &entity.ProductDifferentiationEntity{
+				// 		Elements: [][]string{
+				// 			{"сік"},
+				// 			{"нектар"},
+				// 		},
+				// 	},
+				// 	ScrapersConfigs: []scraper.ScraperConfig{
+				// 		{
+				// 			URLs:    []string{"https://www.atbmarket.com/catalog/324-soki-nektari"},
+				// 			Scraper: &atb.AtbScraper{},
+				// 		},
+				// 		{
+				// 			URLs: []string{
+				// 				"https://fora.ua/category/nektary-2489",
+				// 				"https://fora.ua/category/soky-2490",
+				// 			},
+				// 			Scraper: &fora.ForaScraper{},
+				// 		},
+				// 		{
+				// 			URLs: []string{
+				// 				"https://silpo.ua/category/soki-nektari-5096",
+				// 			},
+				// 			Scraper: &silpo.SilpoScraper{},
+				// 		},
+				// 	},
+				// },
 			},
 		},
 		nil,

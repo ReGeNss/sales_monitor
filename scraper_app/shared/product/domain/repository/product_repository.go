@@ -3,12 +3,11 @@ package repository
 import (
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
-	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 )
 
 type ProductRepository interface {
-	GetProductByFingerprint(fingerprint string, brandID int, categoryID int, attributes []*models.ProductAttribute) (*models.Product, error)
-	GetMostSimilarProductID(fingerprint string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (uint, error)
+	GetProductByFingerprint(fingerprint *string, brandID int, categoryID int, attributes []*models.ProductAttribute) (*models.Product, error)
+	GetMostSimilarProductID(fingerprint *string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (uint, error)
 	CreateProduct(product *models.Product, attributes []*models.ProductAttribute) (uint,error)
 	AddPriceToProduct(price *models.Price) error
 
@@ -21,5 +20,5 @@ type ProductRepository interface {
 	GetBrandByName(name string) (*models.Brand, error)
 	GetMarketplaceByName(name string) (*models.Marketplace, error)
 	GetAllBrands() ([]models.Brand, error)
-	GetLaterScrapedProducts(marketplace string, category string) ([]*scraper_config.LaterScrapedProducts, error)
+	GetLaterScrapedProducts(brandID int) (entity.LaterScrapedProductsUrls, error)
 }

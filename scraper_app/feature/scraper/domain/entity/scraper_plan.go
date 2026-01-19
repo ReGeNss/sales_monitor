@@ -18,8 +18,9 @@ type ScraperConfig struct {
 	Scraper         Scraper
 }
 
-type LaterScrapedProducts struct {
+type LaterScrapedProducts map[string]LaterScrapedProductPrices
+
+type LaterScrapedProductPrices struct {
 	CurrentPrice float64
-	DiscountedPrice float64
-	URL string
+	DiscountedPrice *float64
 }

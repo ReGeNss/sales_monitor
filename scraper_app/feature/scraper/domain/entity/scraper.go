@@ -12,7 +12,7 @@ type Scraper interface {
 		browser playwright.Browser, 
 		url string, 
 		wordsToIgnore []string, 
-		cachedProducts []*LaterScrapedProducts,
+		cachedProducts *LaterScrapedProducts,
 	) []*entity.ScrapedProduct
 }
 

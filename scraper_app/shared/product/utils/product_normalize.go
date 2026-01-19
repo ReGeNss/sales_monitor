@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"regexp"
 	regexps "sales_monitor/scraper_app/core/regexp"
 	"slices"
@@ -8,7 +9,8 @@ import (
 	"unicode/utf8"
 )
 
-func NormalizeProductName(name string, wordsToIgnore []string) string {
+func NormalizeProductName(name string, wordsToIgnore []string) *string {
+	fmt.Println("wordsToIgnore", wordsToIgnore)
 	loweredName := strings.ToLower(name)
 
 	gramsRegex := regexp.MustCompile(regexps.GramsRegex)
@@ -32,7 +34,7 @@ func NormalizeProductName(name string, wordsToIgnore []string) string {
 
 	deletedSmallWords := []string{}
 	for _, word := range words {
-		if utf8.RuneCountInString(word) > 2 {
+		if utf8.RuneCountInString(word) > 1 {
 			deletedSmallWords = append(deletedSmallWords, word)
 		}
 	}
@@ -43,5 +45,9 @@ func NormalizeProductName(name string, wordsToIgnore []string) string {
 
 	normalizedName := strings.Join(deletedSmallWords, " ")
 	
-	return normalizedName
+	if normalizedName == "" {
+		return nil
+	}
+
+	return &normalizedName
 }

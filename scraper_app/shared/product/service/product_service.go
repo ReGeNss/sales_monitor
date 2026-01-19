@@ -84,8 +84,23 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 					brandID = brand.BrandID
 				}
 
+				laterScrapedProductsUrls, err := s.productRepository.GetLaterScrapedProducts(brandID)
+				if err != nil {
+					log.Printf("could not get later scraped products: %v", err)
+				}
+
 				for _, product := range products {
-					fingerprint := utils.NormalizeProductName(product.Name, []string{brandName, categoryName})
+					if id, ok := laterScrapedProductsUrls[product.URL]; ok {
+						s.productRepository.AddPriceToProduct(&models.Price{
+							ProductID:     id,
+							MarketplaceID: marketplaceID,
+							RegularPrice:  product.RegularPrice,
+							DiscountPrice: &product.DiscountedPrice,
+							URL:           product.URL,
+						})	
+					}
+
+					fingerprint := utils.NormalizeProductName(product.Name, append([]string{brandName, categoryName}, scrapedData.WordsToIgnore...))
 					attributes := []*models.ProductAttribute{}
 
 					if product.Volume != "" {

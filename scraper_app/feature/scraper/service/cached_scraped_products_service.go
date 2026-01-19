@@ -7,7 +7,7 @@ import (
 
 
 type CachedScrapedProductService interface {
-	GetCachedScrapedProducts(marketplace string, category string) ([]*scraper_config.LaterScrapedProducts, error)
+	GetCachedScrapedProducts(marketplace string, category string) (*scraper_config.LaterScrapedProducts, error)
 }
 
 type cachedScrapedProductServiceImpl struct {
@@ -20,6 +20,6 @@ func NewCachedScrapedProductService(productRepository repository.CachedScrapedPr
 	}
 }
 
-func (s *cachedScrapedProductServiceImpl) GetCachedScrapedProducts(marketplace string, category string) ([]*scraper_config.LaterScrapedProducts, error) {
+func (s *cachedScrapedProductServiceImpl) GetCachedScrapedProducts(marketplace string, category string) (*scraper_config.LaterScrapedProducts, error) {
 	return s.repository.GetCachedScrapedProducts(marketplace, category)
 }

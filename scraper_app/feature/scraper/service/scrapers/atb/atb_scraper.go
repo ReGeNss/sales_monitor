@@ -20,7 +20,7 @@ func (s *AtbScraper) GetMarketplaceName() string {
 	return "АТБ"
 }
 
-func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts []*scraper_config.LaterScrapedProducts) []*entity.ScrapedProduct {
+func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts *scraper_config.LaterScrapedProducts) []*entity.ScrapedProduct {
 	page, err := browser.NewPage()
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
@@ -50,6 +50,15 @@ func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnor
 
 	productsWithBrand := []*entity.ScrapedProduct{}
 	for _, product := range products {
+		if cachedProducts != nil {
+			cachedProduct, ok := (*cachedProducts)[product.URL]
+			if ok {
+				if utils.CheckForProductUpdate(&cachedProduct, product) {
+					continue
+				}
+			}
+		}
+
 		(func() {
 			page, err = browser.NewPage()
 			if err != nil {
