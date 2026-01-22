@@ -1,1 +1,1 @@
-CREATE INDEX brand_category_product_indx ON Product(category_id, brand_id)
+CREATE INDEX brand_category_product_indx ON products(category_id, brand_id)

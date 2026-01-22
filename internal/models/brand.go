@@ -8,5 +8,5 @@ type Brand struct {
 
 
 func (Brand) TableName() string {
-	return "Brand"
+	return "brands"
 }

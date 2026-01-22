@@ -8,5 +8,5 @@ type Marketplace struct {
 }
 
 func (Marketplace) TableName() string {
-	return "Marketplace"
+	return "marketplaces"
 }

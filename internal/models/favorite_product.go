@@ -9,5 +9,5 @@ type FavoriteProduct struct {
 }
 
 func (FavoriteProduct) TableName() string {
-	return "FavoriteProduct"
+	return "favorite_products"
 }

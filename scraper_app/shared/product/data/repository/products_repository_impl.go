@@ -142,7 +142,7 @@ func (p *productRepositoryImpl) CreateProduct(product *models.Product, attribute
 func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint *string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (uint, error) {
 	var products []models.Product
 
-	query := p.db.Model(&models.Product{}).Table("Product as p").
+	query := p.db.Model(&models.Product{}).Table("products as p").
 		Select("p.product_id, p.name_fingerprint").
 		Where("category_id = ? AND brand_id = ?", categoryID, brandID)
 
@@ -187,7 +187,7 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint *string, att
 
 func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint *string, brandID int, categoryID int, attributes []*models.ProductAttribute) (*models.Product, error) {
 	var product models.Product
-	query := p.db.Model(&models.Product{}).Table("Product as p").Where("p.name_fingerprint = ? AND p.brand_id = ? AND p.category_id = ?", fingerprint, brandID, categoryID)
+	query := p.db.Model(&models.Product{}).Table("products as p").Where("p.name_fingerprint = ? AND p.brand_id = ? AND p.category_id = ?", fingerprint, brandID, categoryID)
 	query = attributesToQuery(attributes, query)
 
 	if err := query.First(&product).Error; err != nil {
@@ -224,7 +224,7 @@ func (p *productRepositoryImpl) GetAllBrands() ([]models.Brand, error) {
 func (p *productRepositoryImpl) GetLaterScrapedProducts(brandID int) (entity.LaterScrapedProductsUrls, error) {
 	var marketplaceProducts []models.MarketplaceProduct
 	err := p.db.Model(&models.MarketplaceProduct{}).Table("marketplace_products as mp").
-		Joins("JOIN Product p ON p.product_id = mp.product_id").
+		Joins("JOIN products p ON p.product_id = mp.product_id").
 		Where("p.brand_id = ?", brandID).
 		Find(&marketplaceProducts).Error
 	if err != nil {

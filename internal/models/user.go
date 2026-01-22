@@ -6,10 +6,10 @@ type User struct {
 	Password string `gorm:"notNull;column:password;type:varchar(255)"`
 	NFToken  string `gorm:"column:nf_token;type:text"`
 
-	FavoriteBrands   []Brand   `gorm:"many2many:Favorite_Brand;joinForeignKey:user_id;joinReferences:brand_id"`
-	FavoriteProducts []Product `gorm:"many2many:Favorite_Product;joinForeignKey:user_id;joinReferences:product_id"`
+	FavoriteBrands   []Brand   `gorm:"many2many:favorite_brands;joinForeignKey:user_id;joinReferences:brand_id"`
+	FavoriteProducts []Product `gorm:"many2many:favorite_products;joinForeignKey:user_id;joinReferences:product_id"`
 }
 
 func (User) TableName() string {
-	return "User"
+	return "users"
 }
