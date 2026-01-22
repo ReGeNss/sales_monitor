@@ -91,13 +91,11 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 
 				for _, product := range products {
 					if id, ok := laterScrapedProductsUrls[product.URL]; ok {
-						s.productRepository.AddPriceToProduct(&models.Price{
-							ProductID:     id,
-							MarketplaceID: marketplaceID,
-							RegularPrice:  product.RegularPrice,
-							DiscountPrice: &product.DiscountedPrice,
-							URL:           product.URL,
-						})	
+						s.productRepository.AddPriceToMarketplaceProductID(
+							id,
+							product.RegularPrice,
+							&product.DiscountedPrice,
+						)
 					}
 
 					fingerprint := utils.NormalizeProductName(product.Name, append([]string{brandName, categoryName}, scrapedData.WordsToIgnore...))
@@ -144,13 +142,13 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 						productID = existingProduct.ProductID
 					}
 
-					s.productRepository.AddPriceToProduct(&models.Price{
-						ProductID:     productID,
-						MarketplaceID: marketplaceID,
-						RegularPrice:  product.RegularPrice,
-						DiscountPrice: &product.DiscountedPrice,
-						URL:           product.URL,
-					})
+					s.productRepository.AddPriceToMarketplaceProduct(
+						productID,
+						marketplaceID,
+						product.URL,
+						product.RegularPrice,
+						&product.DiscountedPrice,
+					)
 				}
 			}
 		}

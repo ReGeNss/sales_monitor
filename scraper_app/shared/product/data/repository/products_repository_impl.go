@@ -69,8 +69,36 @@ func (p *productRepositoryImpl) GetMarketplaceByName(name string) (*models.Marke
 	return &marketplace, nil
 }
 
-func (p *productRepositoryImpl) AddPriceToProduct(price *models.Price) error {
-	return p.db.Model(&models.Price{}).Create(price).Error
+func (p *productRepositoryImpl) AddPriceToMarketplaceProduct(productID int, marketplaceID int, url string, regularPrice float64, discountPrice *float64) error {
+	marketplaceProduct := models.MarketplaceProduct{
+		MarketplaceID: marketplaceID,
+		ProductID:     productID,
+		URL:           url,
+	}
+
+	if err := p.db.Model(&models.MarketplaceProduct{}).
+		Where("marketplace_id = ? AND product_id = ? AND url = ?", marketplaceID, productID, url).
+		FirstOrCreate(&marketplaceProduct).Error; err != nil {
+		return err
+	}
+
+	price := models.Price{
+		MarketplaceProductID: marketplaceProduct.MarketplaceProductID,
+		RegularPrice:         regularPrice,
+		DiscountPrice:        discountPrice,
+	}
+
+	return p.db.Model(&models.Price{}).Create(&price).Error
+}
+
+func (p *productRepositoryImpl) AddPriceToMarketplaceProductID(marketplaceProductID int, regularPrice float64, discountPrice *float64) error {
+	price := models.Price{
+		MarketplaceProductID: marketplaceProductID,
+		RegularPrice:         regularPrice,
+		DiscountPrice:        discountPrice,
+	}
+
+	return p.db.Model(&models.Price{}).Create(&price).Error
 }
 
 func (p *productRepositoryImpl) CreateProduct(product *models.Product, attributes []*models.ProductAttribute) (uint, error) {
@@ -129,7 +157,7 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint *string, att
 		}
 		return uint(product.ProductID), nil
 	}
-	
+
 	err := query.Where("MATCH(p.name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0", *fingerprint).
 		Order(fmt.Sprintf("MATCH(p.name_fingerprint) AGAINST('%s' IN NATURAL LANGUAGE MODE) DESC", *fingerprint)).
 		Limit(4).
@@ -194,15 +222,18 @@ func (p *productRepositoryImpl) GetAllBrands() ([]models.Brand, error) {
 }
 
 func (p *productRepositoryImpl) GetLaterScrapedProducts(brandID int) (entity.LaterScrapedProductsUrls, error) {
-	var prices []models.Price
-	err := p.db.Model(&models.Price{}).Table("Price as prc").Joins("JOIN Product p ON p.product_id = prc.product_id").Where("p.brand_id = ?", brandID).Find(&prices).Error
+	var marketplaceProducts []models.MarketplaceProduct
+	err := p.db.Model(&models.MarketplaceProduct{}).Table("marketplace_products as mp").
+		Joins("JOIN Product p ON p.product_id = mp.product_id").
+		Where("p.brand_id = ?", brandID).
+		Find(&marketplaceProducts).Error
 	if err != nil {
 		return nil, err
 	}
 
 	laterScrapedProductsUrls := make(entity.LaterScrapedProductsUrls)
-	for _, price := range prices {
-		laterScrapedProductsUrls[price.URL] = price.ProductID
+	for _, marketplaceProduct := range marketplaceProducts {
+		laterScrapedProductsUrls[marketplaceProduct.URL] = marketplaceProduct.MarketplaceProductID
 	}
 	return laterScrapedProductsUrls, nil
 }

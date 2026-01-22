@@ -34,16 +34,22 @@ CREATE TABLE Product (
     CONSTRAINT fk_product_category FOREIGN KEY (category_id) REFERENCES Category(category_id)
 );
 
+CREATE TABLE marketplace_products (
+    marketplace_product_id INT AUTO_INCREMENT PRIMARY KEY,
+    marketplace_id INT NOT NULL,
+    product_id INT NOT NULL,
+    url TEXT NOT NULL,
+    CONSTRAINT fk_marketplace_product_marketplace FOREIGN KEY (marketplace_id) REFERENCES Marketplace(marketplace_id),
+    CONSTRAINT fk_marketplace_product_product FOREIGN KEY (product_id) REFERENCES Product(product_id)
+);
+
 CREATE TABLE Price (
     price_id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT NOT NULL,
+    marketplace_product_id INT NOT NULL,
     regular_price DECIMAL(10, 2) NOT NULL,
     discount_price DECIMAL(10, 2),
-    marketplace_id INT NOT NULL,
-    url TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_price_product FOREIGN KEY (product_id) REFERENCES Product(product_id),
-    CONSTRAINT fk_price_marketplace FOREIGN KEY (marketplace_id) REFERENCES Marketplace(marketplace_id)
+    CONSTRAINT fk_price_marketplace_product FOREIGN KEY (marketplace_product_id) REFERENCES marketplace_products(marketplace_product_id)
 );
 
 CREATE TABLE Favorite_Product (
