@@ -20,7 +20,7 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgno
 	if err != nil {
 		log.Fatalf("could not create context: %v", err)
 	}
-	page, err := context.NewPage()
+	page, err := utils.OpenPage(context.Browser())
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
 	}
@@ -53,7 +53,7 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgno
 		}
 
 		(func() {
-			page, err = browser.NewPage()
+			page, err = utils.OpenPage(browser)
 			if err != nil {
 				log.Fatalf("could not create page: %v", err)
 			}

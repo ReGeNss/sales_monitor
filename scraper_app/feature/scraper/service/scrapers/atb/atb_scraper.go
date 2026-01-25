@@ -21,12 +21,17 @@ func (s *AtbScraper) GetMarketplaceName() string {
 }
 
 func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts *scraper_config.LaterScrapedProducts) []*entity.ScrapedProduct {
-	page, err := browser.NewPage()
+	page, err := utils.OpenPage(browser)
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
 	}
 	page.Goto(url)
 	page.WaitForLoadState()
+
+	page.Screenshot(playwright.PageScreenshotOptions{
+		Path: playwright.String("screenshot.png"),
+		FullPage: playwright.Bool(true),
+	})
 
 	countOfAllPages := getCountOfAllPages(page)
 
@@ -36,7 +41,7 @@ func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnor
 		products = append(products, getProducts(page, wordsToIgnore)...)
 		page.Close()
 
-		page, err = browser.NewPage()
+		page, err = utils.OpenPage(browser)
 		if err != nil {
 			log.Fatalf("could not create page: %v", err)
 		}
@@ -60,7 +65,7 @@ func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnor
 		}
 
 		(func() {
-			page, err = browser.NewPage()
+			page, err = utils.OpenPage(browser)
 			if err != nil {
 				log.Fatalf("could not create page: %v", err)
 			}

@@ -44,13 +44,14 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 	}
 	browser, err := pw.Chromium.Launch(
 		playwright.BrowserTypeLaunchOptions{
-			Headless: playwright.Bool(false),
+			Headless: playwright.Bool(true),
 			Args: []string{
 				"--disable-blink-features=AutomationControlled",
 				"--disable-dev-shm-usage",
 			},
 		},
 	)
+	
 	if err != nil {
 		log.Fatalf("could not launch browser: %v", err)
 	}
