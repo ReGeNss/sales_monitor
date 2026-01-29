@@ -14,13 +14,13 @@ type ScrapingCategory struct {
 }
 
 type ScraperConfig struct {
-	URLs            []string
-	Scraper         Scraper
+	URLs    []string
+	Scraper Scraper
 }
 
 type LaterScrapedProducts map[string]LaterScrapedProductPrices
 
 type LaterScrapedProductPrices struct {
-	CurrentPrice float64
+	CurrentPrice    float64
 	DiscountedPrice *float64
 }
