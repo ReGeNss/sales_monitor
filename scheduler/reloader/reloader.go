@@ -1,16 +1,19 @@
-package main
+package reloader
 
 import (
 	"log"
+
+	"sales_monitor/scheduler/config"
+	"sales_monitor/scheduler/scheduler"
 )
 
 type ConfigReloader struct {
-	loader    ConfigLoader
-	scheduler JobScheduler
+	loader    config.ConfigLoader
+	scheduler scheduler.JobScheduler
 	logger    *log.Logger
 }
 
-func NewConfigReloader(loader ConfigLoader, scheduler JobScheduler, logger *log.Logger) *ConfigReloader {
+func NewConfigReloader(loader config.ConfigLoader, scheduler scheduler.JobScheduler, logger *log.Logger) *ConfigReloader {
 	return &ConfigReloader{
 		loader:    loader,
 		scheduler: scheduler,
@@ -19,10 +22,7 @@ func NewConfigReloader(loader ConfigLoader, scheduler JobScheduler, logger *log.
 }
 
 func (r *ConfigReloader) Reload() (int, error) {
-	cfg, err := r.loader.Load()
-	if err != nil {
-		return 0, err
-	}
+	cfg := r.loader.Load()
 
 	location, err := cfg.Location()
 	if err != nil {

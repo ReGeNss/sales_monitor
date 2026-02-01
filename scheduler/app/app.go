@@ -1,18 +1,22 @@
-package main
+package app
 
 import (
 	"context"
 	"log"
+
+	"sales_monitor/scheduler/reloader"
+	"sales_monitor/scheduler/scheduler"
+	"sales_monitor/scheduler/watcher"
 )
 
 type App struct {
-	reloader  *ConfigReloader
-	scheduler JobScheduler
-	watcher   *ConfigWatcher
+	reloader  *reloader.ConfigReloader
+	scheduler scheduler.JobScheduler
+	watcher   *watcher.ConfigWatcher
 	logger    *log.Logger
 }
 
-func NewApp(reloader *ConfigReloader, scheduler JobScheduler, watcher *ConfigWatcher, logger *log.Logger) *App {
+func NewApp(reloader *reloader.ConfigReloader, scheduler scheduler.JobScheduler, watcher *watcher.ConfigWatcher, logger *log.Logger) *App {
 	return &App{
 		reloader:  reloader,
 		scheduler: scheduler,

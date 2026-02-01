@@ -1,4 +1,4 @@
-package main
+package scheduler
 
 import (
 	"fmt"
@@ -6,10 +6,19 @@ import (
 	"sync"
 	"time"
 
-	"sales_monitor/internal/schedulerconfig"
+	config "sales_monitor/internal/scheduler_config"
 
 	"github.com/robfig/cron/v3"
 )
+
+type JobRunner interface {
+	Run(jobID string)
+}
+
+type JobScheduler interface {
+	Schedule(location *time.Location, jobs []config.ResolvedJob) error
+	Stop()
+}
 
 type CronJobScheduler struct {
 	mu     sync.Mutex
@@ -25,7 +34,7 @@ func NewCronJobScheduler(runner JobRunner, logger *log.Logger) *CronJobScheduler
 	}
 }
 
-func (s *CronJobScheduler) Schedule(location *time.Location, jobs []schedulerconfig.ResolvedJob) error {
+func (s *CronJobScheduler) Schedule(location *time.Location, jobs []config.ResolvedJob) error {
 	newCron := cron.New(cron.WithLocation(location))
 	for _, job := range jobs {
 		jobCopy := job

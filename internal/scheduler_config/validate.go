@@ -1,41 +1,11 @@
-package main
+package scheduler_config
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/robfig/cron/v3"
-	"gopkg.in/yaml.v3"
 )
-
-func LoadConfig(path string) (*Config, error) {
-	if path == "" {
-		return nil, fmt.Errorf("config path is empty")
-	}
-
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return nil, fmt.Errorf("resolve config path: %w", err)
-	}
-
-	data, err := os.ReadFile(absPath)
-	if err != nil {
-		return nil, fmt.Errorf("read config: %w", err)
-	}
-
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parse yaml: %w", err)
-	}
-
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
-}
 
 func (c *Config) Validate() error {
 	if len(c.Shops) == 0 {
@@ -103,64 +73,15 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+func validateCronExpression(expr string) error {
+	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	_, err := parser.Parse(expr)
+	return err
+}
+
 func (c *Config) Location() (*time.Location, error) {
 	if c.Timezone == "" {
 		return time.Local, nil
 	}
 	return time.LoadLocation(c.Timezone)
-}
-
-func (c *Config) ResolveJobs() ([]ResolvedJob, error) {
-	if err := c.Validate(); err != nil {
-		return nil, err
-	}
-
-	shopCron := map[string]string{}
-	for _, shop := range c.Shops {
-		shopCron[shop.ID] = shop.DefaultCron
-	}
-
-	resolved := make([]ResolvedJob, 0)
-	for _, category := range c.Categories {
-		for _, job := range category.Jobs {
-			cronExpr := job.CronOverride
-			if cronExpr == "" {
-				cronExpr = shopCron[job.ShopID]
-			}
-			resolved = append(resolved, ResolvedJob{
-				ID:              job.ID,
-				ShopID:          job.ShopID,
-				Cron:            cronExpr,
-				CategoryName:    category.Name,
-				WordsToIgnore:   category.WordsToIgnore,
-				Differentiation: category.Differentiation,
-				URLs:            job.URLs,
-			})
-		}
-	}
-
-	return resolved, nil
-}
-
-func (c *Config) FindJob(jobID string) (*ResolvedJob, error) {
-	if jobID == "" {
-		return nil, fmt.Errorf("job id is empty")
-	}
-	jobs, err := c.ResolveJobs()
-	if err != nil {
-		return nil, err
-	}
-	for _, job := range jobs {
-		if job.ID == jobID {
-			jobCopy := job
-			return &jobCopy, nil
-		}
-	}
-	return nil, fmt.Errorf("job %q not found", jobID)
-}
-
-func validateCronExpression(expr string) error {
-	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	_, err := parser.Parse(expr)
-	return err
 }

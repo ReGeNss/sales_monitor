@@ -1,0 +1,41 @@
+timezone: "Europe/Kyiv"
+shops:
+  - id: "fora"
+    default_cron: "*/10 * * * *"
+  - id: "atb"
+    default_cron: "30 */6 * * *"
+  - id: "silpo"
+    default_cron: "15 */6 * * *"
+categories:
+  - name: "sparkling_drinks"
+    words_to_ignore:
+      - "sugar-free"
+      - "drink"
+    differentiation:
+      - ["can"]
+      - ["pet"]
+    jobs:
+      - id: "sparkling_fora"
+        shop_id: "fora"
+        urls:
+          - "https://fora.ua/category/solodka-voda-2483"
+      - id: "sparkling_atb"
+        shop_id: "atb"
+        urls:
+          - "https://www.atbmarket.com/catalog/307-napoi"
+      - id: "sparkling_silpo"
+        shop_id: "silpo"
+        urls:
+          - "https://silpo.ua/category/solodka-voda-gazovana-5095"
+  - name: "chips"
+    words_to_ignore: []
+    differentiation: []
+    jobs:
+      - id: "chips_atb"
+        shop_id: "atb"
+        urls:
+          - "https://www.atbmarket.com/catalog/cipsi"
+      - id: "chips_fora"
+        shop_id: "fora"
+        urls:
+          - "https://fora.ua/category/chypsy-2735"

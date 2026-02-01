@@ -36,10 +36,7 @@ func loadEnv() {
 }
 
 func runConfigJob(configPath string, jobID string) error {
-	cfg, err := config.LoadConfig(configPath)
-	if err != nil {
-		return err
-	}
+	cfg := config.LoadConfig(configPath)
 
 	job, err := cfg.FindJob(jobID)
 	if err != nil {
