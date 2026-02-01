@@ -1,7 +1,8 @@
 services:
   mariadb:
     image: mariadb:latest
-    environment:
+    environment:  
+      MARIADB_ROOT_HOST: ${DB_HOST}
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MARIADB_DATABASE: ${DATABASE_NAME}
       MARIADB_USER: ${DB_USER_NAME}
@@ -41,3 +42,41 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+
+  api-monitor:
+    build:
+      context: .
+      dockerfile: node/apps/api-monitor/Dockerfile
+    ports:
+      - "${API_PORT}:${API_PORT}"
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DB_USER_NAME: ${DB_USER_NAME}
+      DB_USER_PASSWORD: ${DB_USER_PASSWORD}
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${API_PORT}
+      API_CORS_ORIGIN: ${API_CORS_ORIGIN}
+      API_PREFIX: ${API_PREFIX:-api}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./package.json:/workspace/package.json
+      - ./node:/workspace/node
+      - node_modules:/workspace/node_modules
+      - api_monitor_node_modules:/workspace/node/apps/api-monitor/node_modules
+      - database_node_modules:/workspace/node/packages/database/node_modules
+      - common_node_modules:/workspace/node/packages/common/node_modules
+    working_dir: /workspace
+    command: sh -c "npm install && npm rebuild bcrypt --build-from-source && npm run build --workspace=@sales-monitor/database && npm run build --workspace=@sales-monitor/common && npm run dev --workspace=@sales-monitor/api-monitor"
+
+volumes:
+  node_modules:
+  api_monitor_node_modules:
+  database_node_modules:
+  common_node_modules:

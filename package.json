@@ -1,0 +1,19 @@
+{
+  "name": "sales-monitor-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "node/apps/*",
+    "node/packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w @sales-monitor/api-monitor",
+    "build:api": "npm run build -w @sales-monitor/api-monitor",
+    "build:all": "npm run build --workspaces",
+    "test:all": "npm run test --workspaces",
+    "lint:all": "npm run lint --workspaces"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
