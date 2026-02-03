@@ -5,13 +5,11 @@ import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Load .env from project root
-dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -23,16 +21,13 @@ async function bootstrap() {
     }),
   );
 
-  // CORS configuration
   app.enableCors({
     origin: process.env.API_CORS_ORIGIN?.split(',') || '*',
     credentials: true,
   });
 
-  // Global API prefix
   app.setGlobalPrefix(process.env.API_PREFIX || 'api');
 
-  // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('Sales Monitor API')
     .setDescription('API for monitoring product prices across marketplaces')
