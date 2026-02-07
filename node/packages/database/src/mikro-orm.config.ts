@@ -9,5 +9,5 @@ export default defineConfig({
   user: process.env.DB_USER_NAME || 'root',
   password: process.env.DB_USER_PASSWORD || '',
   debug: process.env.NODE_ENV === 'development',
-  allowGlobalContext: true, // For CLI tools
+  allowGlobalContext: true,
 });

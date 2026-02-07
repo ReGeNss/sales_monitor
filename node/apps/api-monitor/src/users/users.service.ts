@@ -6,18 +6,6 @@ import { User } from '@sales-monitor/database';
 export class UsersService {
   constructor(private readonly em: EntityManager) {}
 
-  async getProfile(userId: number) {
-    const user = await this.em.findOne(User, { userId });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return {
-      userId: user.userId,
-      login: user.login,
-      nfToken: user.nfToken,
-    };
-  }
-
   async updateNotificationToken(userId: number, nfToken?: string) {
     const user = await this.em.findOne(User, { userId });
     if (!user) {

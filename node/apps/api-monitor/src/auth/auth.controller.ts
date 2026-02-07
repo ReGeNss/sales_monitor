@@ -28,17 +28,4 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto, @Request() req: any): Promise<AuthResponseDto> {
     return this.authService.login(req.user);
   }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('me')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current user' })
-  @ApiResponse({ status: 200, description: 'Current user info' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@Request() req: any) {
-    return {
-      userId: req.user.userId,
-      login: req.user.login,
-    };
-  }
 }

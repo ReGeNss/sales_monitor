@@ -1,17 +1,17 @@
+import { MySqlDriver } from "@mikro-orm/mysql";
+import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { MikroOrmModule } from "@mikro-orm/nestjs";
-import { MySqlDriver } from "@mikro-orm/mysql";
-import * as path from "path";
 import * as fs from "fs";
+import * as path from "path";
 import { AuthModule } from "./auth/auth.module";
-import { UsersModule } from "./users/users.module";
-import { FavoritesModule } from "./favorites/favorites.module";
-import { ProductsModule } from "./products/products.module";
-import { PricesModule } from "./prices/prices.module";
-import { CategoriesModule } from "./categories/categories.module";
 import { BrandsModule } from "./brands/brands.module";
+import { CategoriesModule } from "./categories/categories.module";
+import { FavoritesModule } from "./favorites/favorites.module";
 import { MarketplacesModule } from "./marketplaces/marketplaces.module";
+import { PricesModule } from "./prices/prices.module";
+import { ProductsModule } from "./products/products.module";
+import { UsersModule } from "./users/users.module";
 
 @Module({
   imports: [

@@ -12,14 +12,7 @@ import { UpdateNotificationTokenDto } from './dto/update-notification-token.dto'
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
-  @Get('profile')
-  @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'User profile' })
-  async getProfile(@CurrentUser() user: User) {
-    return this.usersService.getProfile(user.userId);
-  }
-
+  
   @Put('notification-token')
   @ApiOperation({ summary: 'Update notification token' })
   @ApiResponse({ status: 200, description: 'Token updated successfully' })
