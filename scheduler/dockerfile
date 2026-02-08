@@ -1,0 +1,24 @@
+FROM golang:1.25.5 AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /main/scheduler ./scheduler
+RUN CGO_ENABLED=0 GOOS=linux go build -o /main/scraper_app ./scraper_app
+RUN go install github.com/playwright-community/playwright-go/cmd/playwright@v0.5200.1
+RUN /go/bin/playwright install
+
+FROM debian:bookworm-slim
+WORKDIR /root/
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates tzdata \
+  && rm -rf /var/lib/apt/lists/*
+COPY scraper_config.yaml .
+COPY --from=builder /main .
+COPY --from=builder /go/bin/playwright /usr/local/bin/playwright
+COPY --from=builder /root/.cache /root/.cache
+RUN /usr/local/bin/playwright install-deps && rm -rf /var/lib/apt/lists/*
+
+ENV SCRAPER_WORKER_CMD="./scraper_app"
+
+CMD ["./scheduler"]

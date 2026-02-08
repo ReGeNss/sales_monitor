@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -25,14 +26,15 @@ func main() {
 }
 
 func run(logger *log.Logger) error {
-	if err := godotenv.Load(); err != nil {
-		return err
+	godotenv.Load();
+
+	workerCmd := os.Getenv("SCRAPER_WORKER_CMD")
+
+	if workerCmd == "" {
+		return fmt.Errorf("SCRAPER_WORKER_CMD is required")
 	}
 
-	configPath := config.RequireEnv("SCRAPER_CONFIG_PATH")
-	workerCmd := config.RequireEnv("SCRAPER_WORKER_CMD")
-
-	absConfigPath, err := filepath.Abs(configPath)
+	absConfigPath, err := filepath.Abs("scraper_config.yaml")
 	if err != nil {
 		return err
 	}

@@ -15,15 +15,19 @@ import (
 var ctx = context.Background()
 
 func main() {
-	db.ConnectToDB()
-
 	if err := godotenv.Load(); err != nil {
-		log.Fatalf("error loading .env file: %v\n", err)
+		log.Printf("warning: .env file not loaded: %v\n", err)
 	}
+
+	db.ConnectToRedis()
+	db.ConnectToDB()
 
 	messagingClient := initMessaging()
 
-	queueKey := os.Getenv("NOTIFICATIONS_QUEUE_KEY")
+	queueKey := os.Getenv("NOTIFICATION_QUEUE_KEY")
+	if queueKey == "" {
+		log.Fatalf("missing required env var: NOTIFICATION_QUEUE_KEY")
+	}
 
 	processQueue(db.GetRedis(), queueKey, db.GetDB(), messagingClient)
 }

@@ -1,13 +1,13 @@
 services:
   mariadb:
     image: mariadb:latest
-    environment:  
+    environment:
       MARIADB_ROOT_HOST: ${DB_HOST}
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MARIADB_DATABASE: ${DATABASE_NAME}
       MARIADB_USER: ${DB_USER_NAME}
       MARIADB_PASSWORD: ${DB_USER_PASSWORD}
-    command: 
+    command:
       - --innodb_ft_server_stopword_table=${DATABASE_NAME}/full_text_search_stop_words
     ports:
       - "${DB_PORT}:${DB_PORT}"
@@ -16,7 +16,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
 
   redis_queue:
     image: redis:latest
@@ -45,7 +44,7 @@ services:
     image: arigaio/atlas:latest
     volumes:
       - ./atlas.hcl:/etc/atlas/atlas.hcl
-      - ./migrations:/migrations 
+      - ./migrations:/migrations
     command: >
       migrate apply
       --url "mysql://${DB_USER_NAME}:${DB_USER_PASSWORD}@${DB_HOST}:${DB_PORT}/${DATABASE_NAME}"
@@ -54,10 +53,34 @@ services:
       mariadb:
         condition: service_healthy
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: scheduler/dockerfile
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DB_USER_NAME: ${DB_USER_NAME}
+      DB_USER_PASSWORD: ${DB_USER_PASSWORD}
+      NOTIFICATION_QUEUE_KEY: ${NOTIFICATION_QUEUE_KEY}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis_queue:
+        condition: service_healthy
+
   notifications_service:
     build:
       context: .
       dockerfile: notifications_service/dockerfile
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DB_USER_NAME: ${DB_USER_NAME}
+      DB_USER_PASSWORD: ${DB_USER_PASSWORD}
+      NOTIFICATION_QUEUE_KEY: ${NOTIFICATION_QUEUE_KEY}
     depends_on:
       redis_queue:
         condition: service_healthy
