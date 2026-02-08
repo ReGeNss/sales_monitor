@@ -7,6 +7,7 @@ import (
 
 const (
 	jobID = "SCRAPER_JOB_ID"
+	notificationQueueKey = "NOTIFICATION_QUEUE_KEY"
 )
 
 func getRequiredEnv(key string) (string) {
@@ -17,6 +18,10 @@ func getRequiredEnv(key string) (string) {
 	return value
 }
 
-func getJobID() string {
+func GetJobID() string {
 	return getRequiredEnv(jobID)
+}
+
+func GetNotificationQueueKey() string {
+	return getRequiredEnv(notificationQueueKey)
 }

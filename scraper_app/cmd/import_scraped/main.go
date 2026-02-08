@@ -28,7 +28,7 @@ func main() {
 	}
 
 	productService := service.NewProductService(
-		repository.NewProductRepository(db.GetDB(), api.NewHTTPClient()),
+		repository.NewProductRepository(db.GetDB(), api.NewHTTPClient(), db.GetRedis()),
 	)
 
 	productService.ProcessProducts(scrapedData)

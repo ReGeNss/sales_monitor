@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
-	"strings"
 	config "sales_monitor/internal/scheduler_config"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	scrapers "sales_monitor/scraper_app/feature/scraper/service/scrapers"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"strings"
+
 	"github.com/joho/godotenv"
 )
+
+var Context = context.Background()
 
 func main() {
 	configPathFlag := flag.String("config", "", "Path to scraper config YAML")

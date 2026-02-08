@@ -9,31 +9,23 @@ import (
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
 	"github.com/joho/godotenv"
-	"github.com/redis/go-redis/v9"
 	"google.golang.org/api/option"
 )
 
 var ctx = context.Background()
 
 func main() {
+	db.ConnectToDB()
+
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("error loading .env file: %v\n", err)
 	}
-
-	db := db.GetDB()
-
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-	defer rdb.Close()
 
 	messagingClient := initMessaging()
 
 	queueKey := os.Getenv("NOTIFICATIONS_QUEUE_KEY")
 
-	processQueue(rdb, queueKey, db, messagingClient)
+	processQueue(db.GetRedis(), queueKey, db.GetDB(), messagingClient)
 }
 
 

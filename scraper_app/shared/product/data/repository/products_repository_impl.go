@@ -1,26 +1,54 @@
 package repository
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/core/api"
+	"sales_monitor/scraper_app/core/env"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	"sales_monitor/scraper_app/shared/product/utils"
 
 	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
 type productRepositoryImpl struct {
-	db         *gorm.DB
-	httpClient api.HTTPClient
+	db          *gorm.DB
+	httpClient  api.HTTPClient
+	redisClient *redis.Client
 }
 
-func NewProductRepository(db *gorm.DB, httpClient api.HTTPClient) repository.ProductRepository {
+func (p *productRepositoryImpl) GetLatestProductPrice(productID int) (*models.Price, error) {
+	var price models.Price
+	err := p.db.Model(&models.Price{}).
+		Joins("JOIN marketplace_products mp ON mp.marketplace_product_id = prices.marketplace_product_id").
+		Where("mp.product_id = ?", productID).
+		Order("prices.created_at DESC, prices.price_id DESC").
+		First(&price).Error
+	if err != nil {
+		return nil, err
+	}
+	return &price, nil
+}
+
+func (p *productRepositoryImpl) SendNotification(notificationTask *models.NotificationTask) error {
+	json, err := json.Marshal(notificationTask)
+	if err != nil {
+		return err
+	}
+	p.redisClient.LPush(context.Background(), env.GetNotificationQueueKey(), string(json))
+	return nil
+}
+
+func NewProductRepository(db *gorm.DB, httpClient api.HTTPClient, redisClient *redis.Client) repository.ProductRepository {
 	return &productRepositoryImpl{
-		db:         db,
-		httpClient: httpClient,
+		db:          db,
+		httpClient:  httpClient,
+		redisClient: redisClient,
 	}
 }
 
@@ -139,7 +167,7 @@ func (p *productRepositoryImpl) CreateProduct(product *models.Product, attribute
 	return uint(product.ProductID), err
 }
 
-func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint *string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (uint, error) {
+func (p *productRepositoryImpl) GetMostSimilarProduct(fingerprint *string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (*models.Product, error) {
 	var products []models.Product
 
 	query := p.db.Model(&models.Product{}).Table("products as p").
@@ -153,9 +181,9 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint *string, att
 		err := query.Where("p.name_fingerprint IS NULL").First(&product).Error
 
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
-		return uint(product.ProductID), nil
+		return &product, nil
 	}
 
 	err := query.Where("MATCH(p.name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0", *fingerprint).
@@ -164,7 +192,7 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint *string, att
 		Find(&products).Error
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	bestSimilarity := 0
@@ -179,10 +207,10 @@ func (p *productRepositoryImpl) GetMostSimilarProductID(fingerprint *string, att
 	}
 
 	if bestSimilarity >= 91 && utils.ProductDifferentiator(*fingerprint, *bestProduct.NameFingerprint, productDifferentiationEntity) {
-		return uint(bestProduct.ProductID), nil
+		return &bestProduct, nil
 	}
 
-	return 0, fmt.Errorf("no similar product found")
+	return nil, fmt.Errorf("no similar product found")
 }
 
 func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint *string, brandID int, categoryID int, attributes []*models.ProductAttribute) (*models.Product, error) {

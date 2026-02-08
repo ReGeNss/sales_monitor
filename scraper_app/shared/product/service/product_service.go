@@ -89,6 +89,8 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 					log.Printf("could not get later scraped products: %v", err)
 				}
 
+				notificationProducts := []*models.Product{}
+
 				for _, product := range products {
 					if id, ok := laterScrapedProductsUrls[product.URL]; ok {
 						s.productRepository.AddPriceToMarketplaceProductID(
@@ -115,11 +117,12 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 					}
 
 					var productID int
+					var foundProduct *models.Product
 
 					existingProduct, err := s.productRepository.GetProductByFingerprint(fingerprint, brandID, categoryID, attributes)
 
 					if err != nil {
-						matchedProductID, err := s.productRepository.GetMostSimilarProductID(fingerprint, attributes, scrapedData.ProductDifferentiationEntity, brandID, categoryID, marketplaceID)
+						matchedProduct, err := s.productRepository.GetMostSimilarProduct(fingerprint, attributes, scrapedData.ProductDifferentiationEntity, brandID, categoryID, marketplaceID)
 						if err != nil {
 
 							id, err := s.productRepository.CreateProduct(&models.Product{
@@ -136,10 +139,21 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 							}
 							productID = int(id)
 						} else {
-							productID = int(matchedProductID)
+							foundProduct = matchedProduct
+							productID = matchedProduct.ProductID
 						}
 					} else {
+						foundProduct = existingProduct
 						productID = existingProduct.ProductID
+					}
+
+					if(foundProduct != nil) {
+						laterPrice, err := s.productRepository.GetLatestProductPrice(productID)
+						if err != nil {
+							log.Printf("could not get latest product price: %v", err)
+						} else if *laterPrice.DiscountPrice < product.DiscountedPrice {
+							notificationProducts = append(notificationProducts, foundProduct)
+						}
 					}
 
 					s.productRepository.AddPriceToMarketplaceProduct(
@@ -150,6 +164,12 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 						&product.DiscountedPrice,
 					)
 				}
+
+				s.productRepository.SendNotification(&models.NotificationTask{
+					BrandID: brandID,
+					BrandName: brandName,
+
+				})
 			}
 		}
 	}

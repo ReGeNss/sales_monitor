@@ -7,7 +7,7 @@ import (
 
 type ProductRepository interface {
 	GetProductByFingerprint(fingerprint *string, brandID int, categoryID int, attributes []*models.ProductAttribute) (*models.Product, error)
-	GetMostSimilarProductID(fingerprint *string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (uint, error)
+	GetMostSimilarProduct(fingerprint *string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (*models.Product, error)
 	CreateProduct(product *models.Product, attributes []*models.ProductAttribute) (uint, error)
 	AddPriceToMarketplaceProduct(productID int, marketplaceID int, url string, regularPrice float64, discountPrice *float64) error
 	AddPriceToMarketplaceProductID(marketplaceProductID int, regularPrice float64, discountPrice *float64) error
@@ -22,4 +22,7 @@ type ProductRepository interface {
 	GetMarketplaceByName(name string) (*models.Marketplace, error)
 	GetAllBrands() ([]models.Brand, error)
 	GetLaterScrapedProducts(brandID int) (entity.LaterScrapedProductsUrls, error)
+	GetLatestProductPrice(productID int) (*models.Price, error) 
+
+	SendNotification(notificationTask *models.NotificationTask) error
 }
