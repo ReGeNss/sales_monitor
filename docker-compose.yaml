@@ -17,6 +17,17 @@ services:
       timeout: 5s
       retries: 10
 
+
+  redis_queue:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    # healthcheck:
+      # test: ["CMD", "redis-cli", "ping"]
+      # interval: 5s
+      # timeout: 5s
+      # retries: 10
+
   phpMyAdmin:
     image: phpmyadmin/phpmyadmin:latest
     ports:
@@ -40,6 +51,15 @@ services:
       --url "mysql://${DB_USER_NAME}:${DB_USER_PASSWORD}@${DB_HOST}:${DB_PORT}/${DATABASE_NAME}"
       --dir "file:///migrations"
     depends_on:
+      mariadb:
+        condition: service_healthy
+
+  notifications_service:
+    image: notifications_service:latest
+    command: go run main.go
+    depends_on:
+      redis_queue:
+        condition: service_healthy
       mariadb:
         condition: service_healthy
 

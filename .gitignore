@@ -16,6 +16,9 @@ build/
 .env.local
 .env.*.local
 
+# Firebase
+firebase_key.json
+
 # IDE
 .vscode/
 .idea/
