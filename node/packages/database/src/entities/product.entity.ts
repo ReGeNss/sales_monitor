@@ -9,9 +9,6 @@ export class Product {
   @PrimaryKey({ fieldName: 'product_id' })
   productId!: number;
 
-  @Property({ fieldName: 'name_fingerprint', length: 255, nullable: true, unique: true })
-  nameFingerprint?: string;
-
   @ManyToOne(() => Brand, { fieldName: 'brand_id' })
   brand!: Brand;
 
