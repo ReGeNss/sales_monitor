@@ -34,9 +34,11 @@ func (c *cachedScrapedProductsRepositoryImpl) GetCachedScrapedProducts(marketpla
 			return err
 		}
 
-		err = tx.Model(&models.Price{}).Table("prices as prc").Joins(
-			"JOIN products p ON p.product_id = prc.product_id",
-		).Where("marketplace_id = ? AND category_id = ?", marketplaceModel.MarketplaceID, categoryModel.CategoryID).Find(&prices).Error
+		err = tx.Model(&models.Price{}).Table("prices as prc").
+			Joins("JOIN marketplace_products mp ON mp.marketplace_product_id = prc.marketplace_product_id").
+			Joins("JOIN products p ON p.product_id = mp.product_id").
+			Where("mp.marketplace_id = ? AND p.category_id = ?", marketplaceModel.MarketplaceID, categoryModel.CategoryID).
+			Find(&prices).Error
 		return err
 	})
 

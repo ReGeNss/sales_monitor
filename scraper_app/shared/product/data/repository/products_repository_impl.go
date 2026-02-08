@@ -36,12 +36,19 @@ func (p *productRepositoryImpl) GetLatestProductPrice(productID int) (*models.Pr
 }
 
 func (p *productRepositoryImpl) SendNotification(notificationTask *models.NotificationTask) error {
+	if notificationTask == nil {
+		return fmt.Errorf("notification task is nil")
+	}
+	
+	if p.redisClient == nil {
+		return fmt.Errorf("redis client is not initialized")
+	}
+	
 	json, err := json.Marshal(notificationTask)
 	if err != nil {
 		return err
 	}
-	p.redisClient.LPush(context.Background(), env.GetNotificationQueueKey(), string(json))
-	return nil
+	return p.redisClient.LPush(context.Background(), env.GetNotificationQueueKey(), string(json)).Err()
 }
 
 func NewProductRepository(db *gorm.DB, httpClient api.HTTPClient, redisClient *redis.Client) repository.ProductRepository {

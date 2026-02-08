@@ -89,7 +89,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 					log.Printf("could not get later scraped products: %v", err)
 				}
 
-				notificationProducts := []*models.Product{}
+				notificationProducts := []models.Product{}
 
 				for _, product := range products {
 					if id, ok := laterScrapedProductsUrls[product.URL]; ok {
@@ -152,7 +152,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 						if err != nil {
 							log.Printf("could not get latest product price: %v", err)
 						} else if *laterPrice.DiscountPrice < product.DiscountedPrice {
-							notificationProducts = append(notificationProducts, foundProduct)
+							notificationProducts = append(notificationProducts, *foundProduct)
 						}
 					}
 
@@ -165,11 +165,15 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 					)
 				}
 
-				s.productRepository.SendNotification(&models.NotificationTask{
-					BrandID: brandID,
-					BrandName: brandName,
-
-				})
+				if len(notificationProducts) > 0 {
+					if err := s.productRepository.SendNotification(&models.NotificationTask{
+						BrandID: brandID,
+						BrandName: brandName, 
+						Products: notificationProducts,
+					}); err != nil {
+						log.Printf("could not send notification: %v", err)
+					}
+				}
 			}
 		}
 	}
