@@ -1,19 +1,20 @@
 timezone: "Europe/Kyiv"
 shops:
-  - id: "fora"
-    default_cron: "*/10 * * * *"
-  - id: "atb"
-    default_cron: "30 */6 * * *"
   - id: "silpo"
-    default_cron: "15 */6 * * *"
+    default_cron: "0 1 * * 1"
+  - id: "fora"
+    default_cron: "0 1 * * 1"
+  - id: "atb"
+    default_cron: "22 1 * * 3"
 categories:
   - name: "sparkling_drinks"
     words_to_ignore:
-      - "sugar-free"
-      - "drink"
+      - "cola"
     differentiation:
-      - ["can"]
-      - ["pet"]
+      - ["зб"]
+      - ["пет"]
+      - ["zero", "цукру"]
+      - ["black"]
     jobs:
       - id: "sparkling_fora"
         shop_id: "fora"
@@ -39,3 +40,7 @@ categories:
         shop_id: "fora"
         urls:
           - "https://fora.ua/category/chypsy-2735"
+      - id: "chips_silpo"
+        shop_id: "silpo"
+        urls:
+          - "https://silpo.ua/category/chypsy-5017"
