@@ -2,10 +2,12 @@
     WORKDIR /app
     COPY go.mod go.sum ./
     RUN go mod download
-    COPY . .
+    COPY notifications_service ./notifications_service
+    COPY internal ./internal
     RUN CGO_ENABLED=0 GOOS=linux go build -o /main ./notifications_service
     
     FROM alpine:latest
     WORKDIR /root/
     COPY --from=builder /main .
+    COPY firebase_key.json .
     CMD ["./main"]
