@@ -1,14 +1,14 @@
-import { Controller, Get, Put, Delete, Body, UseGuards } from '@nestjs/common';
+import { Controller, Put, Delete, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RegisteredUserGuard } from '../auth/guards/registered-user.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '@sales-monitor/database';
 import { UpdateNotificationTokenDto } from './dto/update-notification-token.dto';
 
 @ApiTags('users')
 @Controller('users')
-@UseGuards(JwtAuthGuard)
+@UseGuards(RegisteredUserGuard)
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

@@ -4,6 +4,7 @@ import { EntityManager } from '@mikro-orm/core';
 import { User } from '@sales-monitor/database';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
+import { GuestLoginDto } from './dto/guest-login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 
 @Injectable()
@@ -45,6 +46,17 @@ export class AuthService {
 
   async login(user: User): Promise<AuthResponseDto> {
     return this.generateTokenResponse(user);
+  }
+
+  guestLogin(dto: GuestLoginDto): { access_token: string } {
+    const payload = {
+      isGuest: true,
+      deviceModel: dto.deviceModel,
+      appVersion: dto.appVersion,
+      platform: dto.platform,
+      locale: dto.locale,
+    };
+    return { access_token: this.jwtService.sign(payload) };
   }
 
   private generateTokenResponse(user: User): AuthResponseDto {

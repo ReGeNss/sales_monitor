@@ -5,8 +5,13 @@ import { EntityManager } from '@mikro-orm/core';
 import { User } from '@sales-monitor/database';
 
 export interface JwtPayload {
-  sub: number;
-  login: string;
+  sub?: number;
+  login?: string;
+  isGuest?: boolean;
+  deviceModel?: string;
+  appVersion?: string;
+  platform?: string;
+  locale?: string;
 }
 
 @Injectable()
@@ -20,6 +25,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
+    if (payload.isGuest) {
+      return {
+        isGuest: true,
+        deviceModel: payload.deviceModel,
+        appVersion: payload.appVersion,
+        platform: payload.platform,
+        locale: payload.locale,
+      };
+    }
+
     const user = await this.em.findOne(User, { userId: payload.sub });
     if (!user) {
       throw new UnauthorizedException('User not found');
