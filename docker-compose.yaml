@@ -1,6 +1,7 @@
 services:
   mariadb:
     image: mariadb:latest
+    restart: unless-stopped
     environment:
       MARIADB_ROOT_HOST: ${DB_HOST}
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
@@ -19,6 +20,7 @@ services:
 
   redis_queue:
     image: redis:latest
+    restart: unless-stopped
     ports:
       - "6379:6379"
     healthcheck:
@@ -29,6 +31,7 @@ services:
 
   phpMyAdmin:
     image: ${PMA_IMAGE:-arm64v8/phpmyadmin}
+    restart: unless-stopped
     ports:
       - "8080:80"
     environment:
@@ -57,6 +60,7 @@ services:
     build:
       context: .
       dockerfile: scheduler/dockerfile
+    restart: unless-stopped
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
@@ -74,6 +78,7 @@ services:
     build:
       context: .
       dockerfile: notifications_service/dockerfile
+    restart: unless-stopped
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
@@ -91,6 +96,7 @@ services:
     build:
       context: .
       dockerfile: node/apps/api-monitor/Dockerfile
+    restart: unless-stopped
     ports:
       - "${API_PORT}:${API_PORT}"
     environment:
