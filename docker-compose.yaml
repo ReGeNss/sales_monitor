@@ -28,7 +28,7 @@ services:
       retries: 10
 
   phpMyAdmin:
-    image: arm64v8/phpmyadmin
+    image: ${PMA_IMAGE:-arm64v8/phpmyadmin}
     ports:
       - "8080:80"
     environment:
