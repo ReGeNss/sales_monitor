@@ -1,17 +1,31 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/playwright-community/playwright-go"
 )
 
 const logsDir = "logs"
+const errorsLogFile = "errors.ndjson"
+
+var errorsLogMu sync.Mutex
+
+// ErrorRecord запис про помилку для відображення в Grafana
+type ErrorRecord struct {
+	Timestamp   string `json:"timestamp"`
+	Error       string `json:"error"`
+	Context     string `json:"context"`
+	Screenshot  string `json:"screenshot"`
+	ScreenshotURL string `json:"screenshot_url,omitempty"` // заповнюється API
+}
 
 func SaveScreenshotOnError(page playwright.Page, err error, context string) {
 	if page == nil || (err == nil && context == "") {
@@ -41,5 +55,29 @@ func SaveScreenshotOnError(page playwright.Page, err error, context string) {
 		log.Printf("could not save screenshot on error: %v", screenshotErr)
 		return
 	}
+
+	record := ErrorRecord{
+		Timestamp:  time.Now().Format(time.RFC3339),
+		Error:      fmt.Sprintf("%v", err),
+		Context:    context,
+		Screenshot:  filename,
+	}
+	if err := appendErrorRecord(record); err != nil {
+		log.Printf("could not save error record: %v", err)
+	}
 	log.Printf("screenshot saved to %s (error: %v)", path, err)
+}
+
+func appendErrorRecord(record ErrorRecord) error {
+	errorsLogMu.Lock()
+	defer errorsLogMu.Unlock()
+
+	f, err := os.OpenFile(filepath.Join(logsDir, errorsLogFile), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	enc := json.NewEncoder(f)
+	return enc.Encode(record)
 }

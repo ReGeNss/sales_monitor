@@ -33,7 +33,21 @@ services:
     image: prom/pushgateway:latest
     restart: unless-stopped
     ports:
-      - "${PUSHGATEWAY_PORT}:${PUSHGATEWAY_PORT}"
+      - "${PUSHGATEWAY_PORT:-9091}:9091"
+
+  scraper_logs:
+    build:
+      context: .
+      dockerfile: scraper_logs/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${SCRAPER_LOGS_PORT:-9092}:9092"
+    environment:
+      SCRAPER_LOGS_PORT: ${SCRAPER_LOGS_PORT:-9092}
+      SCRAPER_LOGS_DIR: /app/logs
+      SCRAPER_LOGS_PUBLIC_URL: ${SCRAPER_LOGS_PUBLIC_URL:-http://localhost:9092}
+    volumes:
+      - ./logs:/app/logs
 
   prometheus:
     image: prom/prometheus:latest
