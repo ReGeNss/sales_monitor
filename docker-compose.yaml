@@ -29,6 +29,27 @@ services:
       timeout: 5s
       retries: 10
 
+  pushgateway:
+    image: prom/pushgateway:latest
+    restart: unless-stopped
+    ports:
+      - "${PUSHGATEWAY_PORT}:${PUSHGATEWAY_PORT}"
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT}:${PROMETHEUS_PORT}"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    depends_on:
+      - pushgateway
+
   phpMyAdmin:
     image: ${PMA_IMAGE:-arm64v8/phpmyadmin}
     restart: unless-stopped
@@ -68,6 +89,7 @@ services:
       DB_USER_NAME: ${DB_USER_NAME}
       DB_USER_PASSWORD: ${DB_USER_PASSWORD}
       NOTIFICATION_QUEUE_KEY: ${NOTIFICATION_QUEUE_KEY}
+      PUSHGATEWAY_URL: "http://pushgateway:${PUSHGATEWAY_PORT}"
     volumes:
       - ./logs:/root/logs
     depends_on:
@@ -75,6 +97,8 @@ services:
         condition: service_healthy
       redis_queue:
         condition: service_healthy
+      pushgateway:
+        condition: service_started
 
   notifications_service:
     build:
@@ -132,3 +156,4 @@ volumes:
   api_monitor_node_modules:
   database_node_modules:
   common_node_modules:
+  prometheus_data:

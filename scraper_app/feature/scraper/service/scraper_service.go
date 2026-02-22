@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	config "sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/metrics"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
 	"sales_monitor/scraper_app/utils"
@@ -121,6 +122,13 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 
 	log.Printf("=== Scraping summary: found: %d, scraped: %d, new: %d, on sale: %d ===",
 		totalFound, totalScraped, totalNew, totalOnSale)
+
+	metrics.PushToPrometheus(metrics.ScrapingMetrics{
+		Found:   totalFound,
+		Scraped: totalScraped,
+		New:     totalNew,
+		OnSale:  totalOnSale,
+	})
 
 	return scrapedProducts, nil
 }
