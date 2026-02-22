@@ -68,6 +68,8 @@ services:
       DB_USER_NAME: ${DB_USER_NAME}
       DB_USER_PASSWORD: ${DB_USER_PASSWORD}
       NOTIFICATION_QUEUE_KEY: ${NOTIFICATION_QUEUE_KEY}
+    volumes:
+      - ./logs:/root/logs
     depends_on:
       mariadb:
         condition: service_healthy
