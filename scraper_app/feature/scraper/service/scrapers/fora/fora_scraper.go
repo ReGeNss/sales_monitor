@@ -15,7 +15,7 @@ func (s *ForaScraper) GetMarketplaceName() string {
 	return "Фора"
 }
 
-func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts *scraper_config.LaterScrapedProducts) []*entity.ScrapedProduct {
+func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts *scraper_config.LaterScrapedProducts) *scraper_config.ScrapeResult {
 	context, err := browser.NewContext()
 	if err != nil {
 		log.Fatalf("could not create context: %v", err)
@@ -42,10 +42,13 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgno
 	page.Close()
 	
 	productsWithBrand := []*entity.ScrapedProduct{}
+	newCount := 0
 	for _, product := range products {
+		inCache := false
 		if cachedProducts != nil {
 			cachedProduct, ok := (*cachedProducts)[product.URL]
 			if ok {
+				inCache = true
 				if utils.CheckForProductUpdate(&cachedProduct, product) {
 					continue
 				}
@@ -57,22 +60,29 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgno
 			if err != nil {
 				log.Fatalf("could not create page: %v", err)
 			}
-	
+
 			page.Goto(product.URL)
 			defer page.Close()
 			page.WaitForLoadState()
-	
+
 			product, err = getProductBrand(page, product)
 			if err != nil {
 				utils.SaveScreenshotOnError(page, err, "fora_product_brand")
 				log.Printf("could not get product brand: %v", err)
 				return
 			}
+			if !inCache {
+				newCount++
+			}
 			productsWithBrand = append(productsWithBrand, product)
 		})()
 	}
 
-	return productsWithBrand
+	return &scraper_config.ScrapeResult{
+		Products:   productsWithBrand,
+		FoundCount: len(products),
+		NewCount:   newCount,
+	}
 }
 
 func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.ScrapedProduct {

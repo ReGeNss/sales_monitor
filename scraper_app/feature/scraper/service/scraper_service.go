@@ -38,6 +38,8 @@ func NewScraperService(
 
 func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error) {
 	scrapedProducts := map[string]*config.ScrapingResult{}
+	var totalFound, totalScraped, totalNew, totalOnSale int
+
 	pw, err := playwright.Run()
 	if err != nil {
 		log.Fatalf("could not start playwright: %v", err)
@@ -65,12 +67,13 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 					cachedProducts = nil
 				}
 
-				products := scraperConfig.Scraper.Scrape(
-					browser, 
-					url, 
-					scrapingCategory.WordsToIgnore, 
+				result := scraperConfig.Scraper.Scrape(
+					browser,
+					url,
+					scrapingCategory.WordsToIgnore,
 					cachedProducts,
 				)
+				products := result.Products
 
 				if scrapedProducts[scrapingCategory.Category] == nil {
 					scrapedProducts[scrapingCategory.Category] = &config.ScrapingResult{
@@ -78,7 +81,7 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 							Products:        products,
 							MarketplaceName: scraperConfig.Scraper.GetMarketplaceName(),
 						}},
-						WordsToIgnore: scrapingCategory.WordsToIgnore,
+						WordsToIgnore:                scrapingCategory.WordsToIgnore,
 						ProductDifferentiationEntity: scrapingCategory.ProductDifferentiationEntity,
 					}
 				} else {
@@ -87,7 +90,16 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 						MarketplaceName: scraperConfig.Scraper.GetMarketplaceName(),
 					})
 				}
-				log.Printf("found %d products", len(products))
+
+				onSale := countProductsOnSale(products)
+				totalFound += result.FoundCount
+				totalScraped += len(products)
+				totalNew += result.NewCount
+				totalOnSale += onSale
+
+				log.Printf("[%s] found: %d, scraped: %d, new: %d, on sale: %d",
+					scraperConfig.Scraper.GetMarketplaceName(),
+					result.FoundCount, len(products), result.NewCount, onSale)
 			}
 		}
 	}
@@ -100,12 +112,25 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 	}
 
 	utils.SaveToJsonFile(
-		&scrapedProducts, 
-		fmt.Sprintf("%s/scraped_%s_%s.json", 
+		&scrapedProducts,
+		fmt.Sprintf("%s/scraped_%s_%s.json",
 			os.Getenv("SCRAPED_DATA_FOLDER"),
 			strings.Join(scrapedCategories, " "),
 			time.Now().Format(time.DateTime)),
 	)
-	fmt.Printf("scraped %d products GOOOL ___________\n", len(scrapedProducts))
+
+	log.Printf("=== Scraping summary: found: %d, scraped: %d, new: %d, on sale: %d ===",
+		totalFound, totalScraped, totalNew, totalOnSale)
+
 	return scrapedProducts, nil
+}
+
+func countProductsOnSale(products []*entity.ScrapedProduct) int {
+	count := 0
+	for _, p := range products {
+		if p.DiscountedPrice > 0 && p.RegularPrice < p.DiscountedPrice {
+			count++
+		}
+	}
+	return count
 }

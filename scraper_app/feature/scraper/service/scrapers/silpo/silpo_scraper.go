@@ -18,7 +18,7 @@ func (s *SilpoScraper) GetMarketplaceName() string {
 	return "Сільпо"
 }
 
-func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts *scraper_config.LaterScrapedProducts) []*entity.ScrapedProduct {
+func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts *scraper_config.LaterScrapedProducts) *scraper_config.ScrapeResult {
 	page, err := utils.OpenPage(browser)
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
@@ -84,15 +84,17 @@ func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgn
 	page.Close()
 
 	productsWithBrand := []*entity.ScrapedProduct{}
+	newCount := 0
 
 	for _, product := range products {
+		inCache := false
 		if cachedProducts != nil {
 			cachedProduct, ok := (*cachedProducts)[product.URL]
 			if ok {
+				inCache = true
 				if utils.CheckForProductUpdate(&cachedProduct, product) {
 					continue
 				}
-				continue
 			}
 		}
 
@@ -111,11 +113,18 @@ func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgn
 				log.Printf("could not get product brand: %v", err)
 				return
 			}
+			if !inCache {
+				newCount++
+			}
 			productsWithBrand = append(productsWithBrand, product)
 		})()
 	}
 
-	return productsWithBrand
+	return &scraper_config.ScrapeResult{
+		Products:   productsWithBrand,
+		FoundCount: len(products),
+		NewCount:   newCount,
+	}
 }
 
 func waitForStableElementCount(page playwright.Page, selector string, checkInterval time.Duration, maxChecks int) int {
