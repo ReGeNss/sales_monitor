@@ -26,13 +26,15 @@ func getLogsDir() string {
 
 type ErrorContext struct {
 	Context string 
-	URL     string 
+	URL     string
+	Index 	int
 }
 
 type ErrorRecord struct {
 	Timestamp     string `json:"timestamp"`
 	Error         string `json:"error"`
 	Context       string `json:"context"`
+	IndexOnPage   int	 `json:"index_on_page,omitempty"`
 	URL           string `json:"url,omitempty"`
 	Screenshot    string `json:"screenshot"`
 	ScreenshotURL string `json:"screenshot_url,omitempty"`
@@ -74,6 +76,7 @@ func SaveScreenshotOnError(page playwright.Page, err error, ctx ErrorContext) {
 		Error:      fmt.Sprintf("%v", err),
 		Context:    ctx.Context,
 		URL:        ctx.URL,
+		IndexOnPage: ctx.Index,
 		Screenshot: filename,
 	}
 	if err := appendErrorRecord(record, logsDir); err != nil {

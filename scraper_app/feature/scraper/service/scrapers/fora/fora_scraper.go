@@ -95,17 +95,23 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 		return products
 	}
 
-	for _, item := range items {
+	for index, item := range items {
 		pricesBloc := item.Locator(".product-price-container")
 		count, _ := pricesBloc.Count()
 		if count == 0 {
 			continue
 		}
 
+		productLink, err := item.Locator(".image-content-wrapper").GetAttribute("href")
+		if err != nil {
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_product_link", Index: index, URL: productLink})
+			log.Printf("could not get product link: %v", err)
+		}
+
 		currentPriceIntElement := pricesBloc.Locator(".current-integer")
 		currentPriceInt, err := currentPriceIntElement.InnerText()
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_current_price"})
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_current_price", Index: index, URL: productLink})
 			log.Printf("could not get current price integer: %v", err)
 			continue
 		}
@@ -135,7 +141,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 		}
 		title, err := titleElement.InnerText()
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_title"})
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_title", Index: index, URL: productLink})
 			log.Printf("could not get title, skipping item: %v", err)
 			continue
 		}
@@ -145,15 +151,9 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 		imgElement := item.Locator(".product-list-item__image")
 		imgSrc, err := imgElement.GetAttribute("src")
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_image_src"})
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_image_src", Index: index, URL: productLink})
 			log.Printf("could not get image src: %v", err)
 			imgSrc = ""
-		}
-
-		productLink, err := item.Locator(".image-content-wrapper").GetAttribute("href")
-		if err != nil {
-			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_product_link"})
-			log.Printf("could not get product link: %v", err)
 		}
 
 		product := entity.NewScrapedProduct(
