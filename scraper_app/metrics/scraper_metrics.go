@@ -1,20 +1,36 @@
 package metrics
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 )
 
 const jobName = "scraper"
+const maxLabelLength = 128
 
 type ScrapingMetrics struct {
 	Found   int
 	Scraped int
 	New     int
 	OnSale  int
+
+	SampleProductName   string  
+	SampleProductPrice  float64 
+	SampleCategory      string  
+	SampleMarketplace   string  
+}
+
+func truncateLabel(s string, maxLen int) string {
+	s = strings.TrimSpace(s)
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
 }
 
 func PushToPrometheus(metrics ScrapingMetrics) {
@@ -25,6 +41,19 @@ func PushToPrometheus(metrics ScrapingMetrics) {
 	}
 
 	pusher := push.New(gatewayURL, jobName)
+
+	if metrics.SampleProductName != "" {
+		pusher.Grouping("sample_product", truncateLabel(metrics.SampleProductName, maxLabelLength))
+	}
+	if metrics.SampleProductPrice > 0 {
+		pusher.Grouping("sample_price", fmt.Sprintf("%.2f", metrics.SampleProductPrice))
+	}
+	if metrics.SampleCategory != "" {
+		pusher.Grouping("category", truncateLabel(metrics.SampleCategory, maxLabelLength))
+	}
+	if metrics.SampleMarketplace != "" {
+		pusher.Grouping("marketplace", truncateLabel(metrics.SampleMarketplace, maxLabelLength))
+	}
 
 	foundGauge := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "scraper_products_found",

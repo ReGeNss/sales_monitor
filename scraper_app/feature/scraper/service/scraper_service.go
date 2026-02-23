@@ -123,12 +123,24 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 	log.Printf("=== Scraping summary: found: %d, scraped: %d, new: %d, on sale: %d ===",
 		totalFound, totalScraped, totalNew, totalOnSale)
 
-	metrics.PushToPrometheus(metrics.ScrapingMetrics{
+	scrapingMetrics := metrics.ScrapingMetrics{
 		Found:   totalFound,
 		Scraped: totalScraped,
 		New:     totalNew,
 		OnSale:  totalOnSale,
-	})
+	}
+	
+	if sample := extractSampleProduct(scrapedProducts); sample != nil {
+		scrapingMetrics.SampleProductName = sample.Name
+		scrapingMetrics.SampleCategory = sample.Category
+		scrapingMetrics.SampleMarketplace = sample.Marketplace
+		if sample.DiscountedPrice > 0 {
+			scrapingMetrics.SampleProductPrice = sample.DiscountedPrice
+		} else {
+			scrapingMetrics.SampleProductPrice = sample.RegularPrice
+		}
+	}
+	metrics.PushToPrometheus(scrapingMetrics)
 
 	return scrapedProducts, nil
 }
@@ -141,4 +153,36 @@ func countProductsOnSale(products []*entity.ScrapedProduct) int {
 		}
 	}
 	return count
+}
+
+type sampleProduct struct {
+	Name            string
+	RegularPrice    float64
+	DiscountedPrice float64
+	Category        string
+	Marketplace     string
+}
+
+func extractSampleProduct(scrapedProducts map[string]*config.ScrapingResult) *sampleProduct {
+	for category, result := range scrapedProducts {
+		if result == nil || len(result.ScrapedProducts) == 0 {
+			continue
+		}
+		for _, sp := range result.ScrapedProducts {
+			if sp == nil || len(sp.Products) == 0 {
+				continue
+			}
+			p := sp.Products[0]
+			if p != nil && p.Name != "" {
+				return &sampleProduct{
+					Name:            p.Name,
+					RegularPrice:    p.RegularPrice,
+					DiscountedPrice: p.DiscountedPrice,
+					Category:        category,
+					Marketplace:     sp.MarketplaceName,
+				}
+			}
+		}
+	}
+	return nil
 }
