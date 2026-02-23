@@ -107,6 +107,7 @@ services:
       PUSHGATEWAY_URL: "http://pushgateway:${PUSHGATEWAY_PORT}"
     volumes:
       - ./logs:/root/logs
+      - ./scraper_config.yaml:/root/scraper_config.yaml
     depends_on:
       mariadb:
         condition: service_healthy

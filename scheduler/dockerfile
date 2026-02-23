@@ -13,7 +13,6 @@ WORKDIR /root/
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates tzdata \
   && rm -rf /var/lib/apt/lists/*
-COPY scraper_config.yaml .
 COPY --from=builder /main .
 COPY --from=builder /go/bin/playwright /usr/local/bin/playwright
 COPY --from=builder /root/.cache /root/.cache
