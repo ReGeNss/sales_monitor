@@ -79,5 +79,8 @@ func appendErrorRecord(record ErrorRecord) error {
 	defer f.Close()
 
 	enc := json.NewEncoder(f)
-	return enc.Encode(record)
+	if err := enc.Encode(record); err != nil {
+		return err
+	}
+	return f.Sync()
 }

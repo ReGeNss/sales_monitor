@@ -100,7 +100,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 						)
 					}
 
-					fingerprint := utils.NormalizeProductName(product.Name, append([]string{brandName, categoryName}, scrapedData.WordsToIgnore...))
+					fingerprint := utils.NormalizeProductName(product.Name, append([]string{strings.ToLower(brandName), strings.ToLower(categoryName)}, scrapedData.WordsToIgnore...))
 					attributes := []*models.ProductAttribute{}
 
 					if product.Volume != "" {

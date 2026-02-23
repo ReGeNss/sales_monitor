@@ -27,28 +27,28 @@ func PushToPrometheus(metrics ScrapingMetrics) {
 	pusher := push.New(gatewayURL, jobName)
 
 	foundGauge := prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "scraper_products_found_total",
+		Name: "scraper_products_found",
 		Help: "Total number of products found in catalog",
 	})
 	foundGauge.Set(float64(metrics.Found))
 	pusher.Collector(foundGauge)
 
 	scrapedGauge := prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "scraper_products_scraped_total",
+		Name: "scraper_products_scraped",
 		Help: "Total number of products scraped with details",
 	})
 	scrapedGauge.Set(float64(metrics.Scraped))
 	pusher.Collector(scrapedGauge)
 
 	newGauge := prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "scraper_products_new_total",
+		Name: "scraper_products_new",
 		Help: "Total number of new products (not in cache)",
 	})
 	newGauge.Set(float64(metrics.New))
 	pusher.Collector(newGauge)
 
 	onSaleGauge := prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "scraper_products_on_sale_total",
+		Name: "scraper_products_on_sale",
 		Help: "Total number of products on sale",
 	})
 	onSaleGauge.Set(float64(metrics.OnSale))
