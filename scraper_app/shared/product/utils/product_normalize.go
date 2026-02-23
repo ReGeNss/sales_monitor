@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"regexp"
 	regexps "sales_monitor/scraper_app/core/regexp"
 	"slices"
@@ -10,7 +9,6 @@ import (
 )
 
 func NormalizeProductName(name string, wordsToIgnore []string) *string {
-	fmt.Println("wordsToIgnore", wordsToIgnore)
 	loweredName := strings.ToLower(name)
 
 	gramsRegex := regexp.MustCompile(regexps.GramsRegex)
