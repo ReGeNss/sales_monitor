@@ -129,7 +129,7 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 		New:     totalNew,
 		OnSale:  totalOnSale,
 	}
-	
+
 	if sample := extractSampleProduct(scrapedProducts); sample != nil {
 		scrapingMetrics.SampleProductName = sample.Name
 		scrapingMetrics.SampleCategory = sample.Category

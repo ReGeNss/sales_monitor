@@ -67,7 +67,7 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgno
 
 			product, err = getProductBrand(page, product)
 			if err != nil {
-				utils.SaveScreenshotOnError(page, err, "fora_product_brand")
+				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_product_brand", URL: product.URL})
 				log.Printf("could not get product brand: %v", err)
 				return
 			}
@@ -90,7 +90,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 
 	items, err := page.Locator(".product-list-item").All()
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, "fora_product_items")
+		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_product_items"})
 		log.Printf("could not get product items: %v", err)
 		return products
 	}
@@ -105,7 +105,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 		currentPriceIntElement := pricesBloc.Locator(".current-integer")
 		currentPriceInt, err := currentPriceIntElement.InnerText()
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, "fora_current_price")
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_current_price"})
 			log.Printf("could not get current price integer: %v", err)
 			continue
 		}
@@ -135,7 +135,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 		}
 		title, err := titleElement.InnerText()
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, "fora_title")
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_title"})
 			log.Printf("could not get title, skipping item: %v", err)
 			continue
 		}
@@ -145,14 +145,14 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 		imgElement := item.Locator(".product-list-item__image")
 		imgSrc, err := imgElement.GetAttribute("src")
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, "fora_image_src")
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_image_src"})
 			log.Printf("could not get image src: %v", err)
 			imgSrc = ""
 		}
 
 		productLink, err := item.Locator(".image-content-wrapper").GetAttribute("href")
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, "fora_product_link")
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_product_link"})
 			log.Printf("could not get product link: %v", err)
 		}
 
@@ -174,7 +174,7 @@ func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*ent
 	amount, err := page.Locator(".preview-product-weight").InnerText()
 
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, "fora_amount")
+		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_amount", URL: product.URL})
 		log.Printf("could not get amount: %v", err)
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*ent
 	descriptions, err := page.Locator(".product-details-column.trademark").All()
 	
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, "fora_descriptions")
+		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_descriptions", URL: product.URL})
 		log.Printf("could not get descriptions: %v", err)
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*ent
 		if strings.TrimSpace(descriptionLabel) == "Торгова марка" {
 			descriptionValue, err := description.Locator(".product-details-value").TextContent()
 			if err != nil {
-				utils.SaveScreenshotOnError(page, err, "fora_description_value")
+				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_description_value", URL: product.URL})
 				return nil, err
 			}
 			product.BrandName = strings.TrimSpace(descriptionValue)

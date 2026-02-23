@@ -35,19 +35,19 @@ func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgn
 
 	loadMoreButton := page.Locator(".pagination__more")
 
-	count, _ := loadMoreButton.Count()
-	if count > 0 {
-		waitErr := loadMoreButton.First().WaitFor()
-		if waitErr != nil {
-			utils.SaveScreenshotOnError(page, waitErr, "silpo_load_more_wait")
-			log.Printf("Error waiting for load more button: %v", waitErr)
-		} else {
-			loadMoreButton.First().ScrollIntoViewIfNeeded()
-			time.Sleep(500 * time.Millisecond)
+		count, _ := loadMoreButton.Count()
+		if count > 0 {
+			waitErr := loadMoreButton.First().WaitFor()
+			if waitErr != nil {
+				utils.SaveScreenshotOnError(page, waitErr, utils.ErrorContext{Context: "silpo_load_more_wait"})
+				log.Printf("Error waiting for load more button: %v", waitErr)
+			} else {
+				loadMoreButton.First().ScrollIntoViewIfNeeded()
+				time.Sleep(500 * time.Millisecond)
 
-			err = loadMoreButton.First().Click()
-			if err != nil {
-				utils.SaveScreenshotOnError(page, err, "silpo_load_more_click")
+				err = loadMoreButton.First().Click()
+				if err != nil {
+					utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_load_more_click"})
 				log.Printf("Error clicking load more button: %v", err)
 			} else {
 				page.WaitForLoadState()
@@ -66,7 +66,7 @@ func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgn
 
 		stableCount := waitForStableElementCount(page, "silpo-products-list-item", 500*time.Millisecond, 10)
 		if stableCount == -1 {
-			utils.SaveScreenshotOnError(page, fmt.Errorf("stable element count failed"), "silpo_stable_count")
+			utils.SaveScreenshotOnError(page, fmt.Errorf("stable element count failed"), utils.ErrorContext{Context: "silpo_stable_count"})
 			log.Printf("Error waiting for stable element count")
 			break
 		}
@@ -109,7 +109,7 @@ func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgn
 
 			product, err = getProductDetails(page, product)
 			if err != nil {
-				utils.SaveScreenshotOnError(page, err, "silpo_product_details")
+				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_product_details", URL: product.URL})
 				log.Printf("could not get product brand: %v", err)
 				return
 			}
@@ -134,7 +134,7 @@ func waitForStableElementCount(page playwright.Page, selector string, checkInter
 	for i := 0; i < maxChecks; i++ {
 		count, err := page.Locator(selector).Count()
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, "silpo_count_elements")
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_count_elements"})
 			log.Printf("Error counting elements: %v", err)
 			return -1
 		}
@@ -200,14 +200,14 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 	`)
 
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, "silpo_js_products")
+		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_js_products"})
 		log.Printf("could not get products via JavaScript: %v", err)
 		return products
 	}
 
 	productsData, ok := result.([]interface{})
 	if !ok {
-		utils.SaveScreenshotOnError(page, fmt.Errorf("unexpected result type"), "silpo_js_result")
+		utils.SaveScreenshotOnError(page, fmt.Errorf("unexpected result type"), utils.ErrorContext{Context: "silpo_js_result"})
 		log.Printf("unexpected result type from JavaScript")
 		return products
 	}
@@ -246,7 +246,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
 	title, err := page.Locator("h1").TextContent()
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, "silpo_title")
+		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_title", URL: product.URL})
 		log.Printf("could not get volume, weight: %v", err)
 		return nil, err
 	}
@@ -254,21 +254,21 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 	re := regexp.MustCompile(`[\d|\,|\.]+[А-я-a-z|\s]+$`)
 	amount := re.FindAllString(strings.TrimSpace(title), -1)
 	if len(amount) == 0 || len(amount[len(amount)-1]) == 0 {
-		utils.SaveScreenshotOnError(page, err, "silpo_amount")
+		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_amount", URL: product.URL})
 		log.Printf("could not get amount: %v", err)
 		return nil, err
 	}
 
 	err = utils.ScraperSetVolumeOrWeight(amount[len(amount)-1], product)
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, "silpo_volume_weight")
+		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_volume_weight", URL: product.URL})
 		log.Printf("could not set volume or weight: %v", err)
 		return nil, err
 	}
 
 	descriptions, err := page.Locator(".mat-expansion-panel").All()
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, "silpo_descriptions")
+		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_descriptions", URL: product.URL})
 		log.Printf("could not get brand: %v", err)
 	}
 
@@ -281,7 +281,7 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 		if strings.Contains(textContent, "Загальна інформація") {
 			description, err := item.Locator(".attributes-list_block").All()
 			if err != nil {
-				utils.SaveScreenshotOnError(page, err, "silpo_attributes")
+				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_attributes", URL: product.URL})
 				return nil, err
 			}
 			for _, attribute := range description {
@@ -290,7 +290,7 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 				if strings.TrimSpace(attributeTitle) == "Торгова марка" {
 					attributeValue, err := attribute.Locator(".attributes-list_block-value").TextContent()
 					if err != nil {
-						utils.SaveScreenshotOnError(page, err, "silpo_brand_value")
+						utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_brand_value", URL: product.URL})
 						return nil, err
 					}
 					product.BrandName = strings.TrimSpace(attributeValue)

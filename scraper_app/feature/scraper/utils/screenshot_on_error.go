@@ -13,31 +13,44 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
-const logsDir = "logs"
 const errorsLogFile = "errors.ndjson"
 
 var errorsLogMu sync.Mutex
 
-// ErrorRecord запис про помилку для відображення в Grafana
-type ErrorRecord struct {
-	Timestamp   string `json:"timestamp"`
-	Error       string `json:"error"`
-	Context     string `json:"context"`
-	Screenshot  string `json:"screenshot"`
-	ScreenshotURL string `json:"screenshot_url,omitempty"` // заповнюється API
+func getLogsDir() string {
+	if d := os.Getenv("SCRAPER_LOGS_DIR"); d != "" {
+		return d
+	}
+	return "logs"
 }
 
-func SaveScreenshotOnError(page playwright.Page, err error, context string) {
-	if page == nil || (err == nil && context == "") {
+type ErrorContext struct {
+	Context string 
+	URL     string 
+}
+
+type ErrorRecord struct {
+	Timestamp     string `json:"timestamp"`
+	Error         string `json:"error"`
+	Context       string `json:"context"`
+	URL           string `json:"url,omitempty"`
+	Screenshot    string `json:"screenshot"`
+	ScreenshotURL string `json:"screenshot_url,omitempty"`
+}
+
+// SaveScreenshotOnError зберігає скріншот і запис про помилку для передачі в scraper_logs API
+func SaveScreenshotOnError(page playwright.Page, err error, ctx ErrorContext) {
+	if page == nil || (err == nil && ctx.Context == "") {
 		return
 	}
 
+	logsDir := getLogsDir()
 	if err := os.MkdirAll(logsDir, 0755); err != nil {
 		log.Printf("could not create logs directory: %v", err)
 		return
 	}
 
-	safeContext := strings.ReplaceAll(strings.ReplaceAll(context, " ", "_"), "/", "-")
+	safeContext := strings.ReplaceAll(strings.ReplaceAll(ctx.Context, " ", "_"), "/", "-")
 	if len(safeContext) > 50 {
 		safeContext = safeContext[:50]
 	}
@@ -59,16 +72,17 @@ func SaveScreenshotOnError(page playwright.Page, err error, context string) {
 	record := ErrorRecord{
 		Timestamp:  time.Now().Format(time.RFC3339),
 		Error:      fmt.Sprintf("%v", err),
-		Context:    context,
-		Screenshot:  filename,
+		Context:    ctx.Context,
+		URL:        ctx.URL,
+		Screenshot: filename,
 	}
-	if err := appendErrorRecord(record); err != nil {
+	if err := appendErrorRecord(record, logsDir); err != nil {
 		log.Printf("could not save error record: %v", err)
 	}
 	log.Printf("screenshot saved to %s (error: %v)", path, err)
 }
 
-func appendErrorRecord(record ErrorRecord) error {
+func appendErrorRecord(record ErrorRecord, logsDir string) error {
 	errorsLogMu.Lock()
 	defer errorsLogMu.Unlock()
 

@@ -78,7 +78,7 @@ func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnor
 
 			product, err = getProductDetails(page, product)
 			if err != nil {
-				utils.SaveScreenshotOnError(page, err, "atb_product_details")
+				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "atb_product_details", URL: product.URL})
 				log.Printf("could not get product brand: %v", err)
 				return
 			}
@@ -100,7 +100,7 @@ func getCountOfAllPages(page playwright.Page) int {
 	countElement := page.Locator(".product-search-count-bottom")
 	countText, err := countElement.InnerText()
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, "atb_get_count")
+		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "atb_get_count"})
 		log.Printf("could not get count of all products: %v", err)
 		return 0
 	}
@@ -108,15 +108,15 @@ func getCountOfAllPages(page playwright.Page) int {
 	re := regexp.MustCompile(`\d+`)
 	matches := re.FindAllString(countText, 2)
 	if len(matches) != 2 {
-		utils.SaveScreenshotOnError(page, err, "atb_parse_count")
-		log.Printf("could not get count of all products: %v", err)
+		utils.SaveScreenshotOnError(page, fmt.Errorf("expected 2 matches, got %d", len(matches)), utils.ErrorContext{Context: "atb_parse_count"})
+		log.Printf("could not get count of all products: matches=%d", len(matches))
 		return 0
 	}
 
 	countAll, err1 := strconv.ParseFloat(matches[1], 64)
 	countPerPage, err2 := strconv.ParseFloat(matches[0], 64)
 	if err1 != nil || err2 != nil || countPerPage == 0 {
-		utils.SaveScreenshotOnError(page, err1, "atb_convert_count")
+		utils.SaveScreenshotOnError(page, err1, utils.ErrorContext{Context: "atb_convert_count"})
 		log.Printf("could not convert product counts to int: %v, %v", err1, err2)
 		return 0
 	}
@@ -128,7 +128,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 
 	items, ok := page.Locator(".catalog-item").All()
 	if ok != nil {
-		utils.SaveScreenshotOnError(page, ok, "atb_catalog_items")
+		utils.SaveScreenshotOnError(page, ok, utils.ErrorContext{Context: "atb_catalog_items"})
 		log.Fatalf("could not get catalog items: %v", ok)
 	}
 
@@ -138,7 +138,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 		currentPriceElement := pricesBloc.Locator(".product-price__top").First()
 		currentPriceText, err := currentPriceElement.GetAttribute("value")
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, "atb_current_price")
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "atb_current_price"})
 			log.Printf("could not get current price: %v", err)
 			continue
 		}
@@ -156,7 +156,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 		titleElement := item.Locator(".catalog-item__title")
 		title, err := titleElement.InnerText()
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, "atb_title")
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "atb_title"})
 			log.Printf("could not get title, skipping item: %v", err)
 			continue
 		}
@@ -166,14 +166,14 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 		imgElement := item.Locator(".catalog-item__img")
 		imgSrc, err := imgElement.GetAttribute("src")
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, "atb_image_src")
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "atb_image_src"})
 			log.Printf("could not get image src: %v", err)
 			imgSrc = ""
 		}
 
 		productLink, err := item.Locator(".catalog-item__photo-link").GetAttribute("href")
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, "atb_product_link")
+			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "atb_product_link"})
 			log.Printf("could not get product link: %v", err)
 		}
 
@@ -195,7 +195,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
 	brandElement, err := page.Locator(".product-characteristics__item").All()
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, "atb_brand_elements")
+		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "atb_brand_elements", URL: product.URL})
 		log.Printf("could not get brand: %v", err)
 		return nil, err
 	}
@@ -206,9 +206,9 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 		}
 
 		if elementTitle == "Торгова марка" {
-			brandName, err := getProductAttributeValue(page, item)
+			brandName, err := getProductAttributeValue(page, item, product.URL)
 			if err != nil {
-				utils.SaveScreenshotOnError(page, err, "atb_brand_name")
+				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "atb_brand_name", URL: product.URL})
 				log.Printf("could not get brand name: %v", err)
 				return nil, err
 			}
@@ -216,14 +216,14 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 		}
 
 		if elementTitle == "Об’єм" {
-			volume, err := getProductAttributeValue(page, item)
+			volume, err := getProductAttributeValue(page, item, product.URL)
 			if err == nil {
 				utils.ScraperSetVolumeOrWeight(volume, product)
 			}
 		}
 
 		if elementTitle == "Вага" {
-			weight, err := getProductAttributeValue(page, item)
+			weight, err := getProductAttributeValue(page, item, product.URL)
 			if err == nil {
 				utils.ScraperSetVolumeOrWeight(weight, product)
 			}
@@ -232,10 +232,10 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 	return product, nil
 }
 
-func getProductAttributeValue(page playwright.Page, item playwright.Locator) (string, error) {
+func getProductAttributeValue(page playwright.Page, item playwright.Locator, url string) (string, error) {
 	volumeElement, err := item.Locator(".product-characteristics__value").InnerText()
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, "atb_attribute_value")
+		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "atb_attribute_value", URL: url})
 		log.Printf("could not get volume: %v", err)
 		return "", err
 	}

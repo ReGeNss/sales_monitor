@@ -24,10 +24,11 @@ func getEnv(key, def string) string {
 }
 
 type ErrorRecord struct {
-	Timestamp    string `json:"timestamp"`
-	Error        string `json:"error"`
-	Context      string `json:"context"`
-	Screenshot   string `json:"screenshot"`
+	Timestamp     string `json:"timestamp"`
+	Error         string `json:"error"`
+	Context       string `json:"context"`
+	URL           string `json:"url,omitempty"`
+	Screenshot    string `json:"screenshot"`
 	ScreenshotURL string `json:"screenshot_url"`
 }
 
