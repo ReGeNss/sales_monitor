@@ -20,7 +20,6 @@ build/
 firebase_key.json
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
