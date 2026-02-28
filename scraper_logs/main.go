@@ -11,9 +11,12 @@ import (
 )
 
 var (
-	logsDir       = getEnv("SCRAPER_LOGS_DIR", "logs")
-	errorsLogFile = "errors.ndjson"
-	defaultPort   = "9092"
+	logsDir         = getEnv("SCRAPER_LOGS_DIR", "logs")
+	baseURL         = getEnv("SCRAPER_LOGS_PUBLIC_URL", "")
+	errorsLogFile   = "errors.ndjson"
+	defaultPort     = "9092"
+	apiErrorsPath   = "/api/errors"
+	screenshotsPath = "/screenshots/"
 )
 
 func getEnv(key, def string) string {
@@ -27,6 +30,7 @@ type ErrorRecord struct {
 	Timestamp     string `json:"timestamp"`
 	Error         string `json:"error"`
 	Context       string `json:"context"`
+	IndexOnPage   int    `json:"index_on_page,omitempty"`
 	URL           string `json:"url,omitempty"`
 	Screenshot    string `json:"screenshot"`
 	ScreenshotURL string `json:"screenshot_url"`
@@ -38,8 +42,8 @@ func main() {
 		port = defaultPort
 	}
 
-	http.HandleFunc("/api/errors", handleErrors)
-	http.HandleFunc("/screenshots/", handleScreenshot)
+	http.HandleFunc(apiErrorsPath, handleErrors)
+	http.HandleFunc(screenshotsPath, handleScreenshot)
 
 	log.Printf("scraper-logs server starting on port %s", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {

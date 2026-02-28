@@ -56,18 +56,19 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgno
 		}
 
 		(func() {
+			productURL := product.URL
 			page, err = utils.OpenPage(browser)
 			if err != nil {
 				log.Fatalf("could not create page: %v", err)
 			}
 
-			page.Goto(product.URL)
+			page.Goto(productURL)
 			defer page.Close()
 			page.WaitForLoadState()
 
 			product, err = getProductBrand(page, product)
 			if err != nil {
-				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_product_brand", URL: product.URL})
+				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_product_brand", URL: productURL})
 				log.Printf("could not get product brand: %v", err)
 				return
 			}

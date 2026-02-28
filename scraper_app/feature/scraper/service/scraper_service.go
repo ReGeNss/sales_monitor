@@ -92,15 +92,22 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 					})
 				}
 
-				onSale := countProductsOnSale(products)
+				validProducts := []*entity.ScrapedProduct{}
+				for _, p := range products {
+					if p != nil {
+						validProducts = append(validProducts, p)
+					}
+				}
+
+				onSale := countProductsOnSale(validProducts)
 				totalFound += result.FoundCount
-				totalScraped += len(products)
+				totalScraped += len(validProducts)
 				totalNew += result.NewCount
 				totalOnSale += onSale
 
 				log.Printf("[%s] found: %d, scraped: %d, new: %d, on sale: %d",
 					scraperConfig.Scraper.GetMarketplaceName(),
-					result.FoundCount, len(products), result.NewCount, onSale)
+					result.FoundCount, len(validProducts), result.NewCount, onSale)
 			}
 		}
 	}

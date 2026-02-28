@@ -99,17 +99,18 @@ func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgn
 		}
 
 		(func() {
+			productURL := product.URL
 			page, err = utils.OpenPage(browser)
 			if err != nil {
 				log.Fatalf("could not create page: %v", err)
 			}
 			defer page.Close()
-			page.Goto(product.URL)
+			page.Goto(productURL)
 			page.WaitForLoadState()
 
 			product, err = getProductDetails(page, product)
 			if err != nil {
-				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_product_details", URL: product.URL})
+				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_product_details", URL: productURL})
 				log.Printf("could not get product brand: %v", err)
 				return
 			}
