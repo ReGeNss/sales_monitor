@@ -2,66 +2,61 @@ name: Deploy to server
 
 on:
   push:
-    branches: [main]
+    branches: [master]
+  workflow_dispatch:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            export PATH=$PATH:/usr/local/bin:/usr/bin
-            cd ${{ secrets.PROJECT_PATH }}
+      - name: Pull latest changes
+        run: |
+          cd ${{ secrets.PROJECT_PATH }}
 
-            BEFORE=$(git rev-parse HEAD)
-            git fetch origin main
-            AFTER=$(git rev-parse origin/main)
+          BEFORE=$(git rev-parse HEAD)
+          git fetch origin master
+          AFTER=$(git rev-parse origin/master)
 
-            if [ "$BEFORE" = "$AFTER" ]; then
-              echo "No new commits, skipping deploy"
-              exit 0
-            fi
+          if [ "$BEFORE" = "$AFTER" ]; then
+            echo "No new commits, skipping deploy"
+            exit 0
+          fi
 
-            CHANGED=$(git diff --name-only "$BEFORE" "$AFTER")
-            echo "Changed files:"
-            echo "$CHANGED"
+          CHANGED=$(git diff --name-only "$BEFORE" "$AFTER")
+          echo "Changed files:"
+          echo "$CHANGED"
 
-            git merge origin/main --ff-only
+          git merge origin/master --ff-only
 
-            SERVICES=""
+          SERVICES=""
 
-            if echo "$CHANGED" | grep -qE '^(scheduler/|scraper_app/|internal/|go\.(mod|sum))'; then
-              SERVICES="$SERVICES scheduler"
-            fi
+          if echo "$CHANGED" | grep -qE '^(scheduler/|scraper_app/|internal/|go\.(mod|sum))'; then
+            SERVICES="$SERVICES scheduler"
+          fi
 
-            if echo "$CHANGED" | grep -qE '^(scraper_logs/|internal/|go\.(mod|sum))'; then
-              SERVICES="$SERVICES scraper_logs"
-            fi
+          if echo "$CHANGED" | grep -qE '^(scraper_logs/|internal/|go\.(mod|sum))'; then
+            SERVICES="$SERVICES scraper_logs"
+          fi
 
-            if echo "$CHANGED" | grep -qE '^(notifications_service/|internal/|go\.(mod|sum))'; then
-              SERVICES="$SERVICES notifications_service"
-            fi
+          if echo "$CHANGED" | grep -qE '^(notifications_service/|internal/|go\.(mod|sum))'; then
+            SERVICES="$SERVICES notifications_service"
+          fi
 
-            if echo "$CHANGED" | grep -qE '^(node/|package\.json|package-lock\.json)'; then
-              SERVICES="$SERVICES api-monitor"
-            fi
+          if echo "$CHANGED" | grep -qE '^(node/|package\.json|package-lock\.json)'; then
+            SERVICES="$SERVICES api-monitor"
+          fi
 
-            if echo "$CHANGED" | grep -qE '^docker-compose\.yaml$'; then
-              SERVICES="scheduler scraper_logs notifications_service api-monitor"
-            fi
+          if echo "$CHANGED" | grep -qE '^docker-compose\.yaml$'; then
+            SERVICES="scheduler scraper_logs notifications_service api-monitor"
+          fi
 
-            SERVICES=$(echo "$SERVICES" | xargs)
+          SERVICES=$(echo "$SERVICES" | xargs)
 
-            if [ -z "$SERVICES" ]; then
-              echo "No service-related changes detected, skipping rebuild"
-              exit 0
-            fi
+          if [ -z "$SERVICES" ]; then
+            echo "No service-related changes detected, skipping rebuild"
+            exit 0
+          fi
 
-            echo "Rebuilding services: $SERVICES"
-            docker compose build $SERVICES
-            docker compose up -d --force-recreate $SERVICES
+          echo "Rebuilding services: $SERVICES"
+          docker compose build $SERVICES
+          docker compose up -d --force-recreate $SERVICES
