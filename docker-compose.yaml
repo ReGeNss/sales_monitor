@@ -8,6 +8,8 @@ services:
       MARIADB_DATABASE: ${DATABASE_NAME}
       MARIADB_USER: ${DB_USER_NAME}
       MARIADB_PASSWORD: ${DB_USER_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
     command:
       - --innodb_ft_server_stopword_table=${DATABASE_NAME}/full_text_search_stop_words
     ports:
@@ -169,6 +171,7 @@ services:
     command: sh -c "npm install && npm rebuild bcrypt --build-from-source && npm run build --workspace=@sales-monitor/database && npm run build --workspace=@sales-monitor/common && npm run dev --workspace=@sales-monitor/api-monitor"
 
 volumes:
+  mariadb_data:
   node_modules:
   api_monitor_node_modules:
   database_node_modules:
