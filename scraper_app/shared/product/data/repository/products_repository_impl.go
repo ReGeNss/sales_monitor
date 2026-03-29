@@ -104,7 +104,7 @@ func (p *productRepositoryImpl) GetMarketplaceByName(name string) (*models.Marke
 	return &marketplace, nil
 }
 
-func (p *productRepositoryImpl) AddPriceToMarketplaceProduct(productID int, marketplaceID int, url string, regularPrice float64, discountPrice *float64) error {
+func (p *productRepositoryImpl) AddPriceToMarketplaceProduct(productID int, marketplaceID int, url string, regularPrice float64, specialPrice *float64) error {
 	marketplaceProduct := models.MarketplaceProduct{
 		MarketplaceID: marketplaceID,
 		ProductID:     productID,
@@ -120,17 +120,17 @@ func (p *productRepositoryImpl) AddPriceToMarketplaceProduct(productID int, mark
 	price := models.Price{
 		MarketplaceProductID: marketplaceProduct.MarketplaceProductID,
 		RegularPrice:         regularPrice,
-		DiscountPrice:        discountPrice,
+		SpecialPrice:         specialPrice,
 	}
 
 	return p.db.Model(&models.Price{}).Create(&price).Error
 }
 
-func (p *productRepositoryImpl) AddPriceToMarketplaceProductID(marketplaceProductID int, regularPrice float64, discountPrice *float64) error {
+func (p *productRepositoryImpl) AddPriceToMarketplaceProductID(marketplaceProductID int, regularPrice float64, specialPrice *float64) error {
 	price := models.Price{
 		MarketplaceProductID: marketplaceProductID,
 		RegularPrice:         regularPrice,
-		DiscountPrice:        discountPrice,
+		SpecialPrice:         specialPrice,
 	}
 
 	return p.db.Model(&models.Price{}).Create(&price).Error

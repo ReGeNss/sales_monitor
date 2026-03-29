@@ -6,6 +6,6 @@ import (
 )
 
 func CheckForProductUpdate(cachedProduct *scraper_config.LaterScrapedProductPrices, product *entity.ScrapedProduct) bool {
-	res := cachedProduct.CurrentPrice == product.RegularPrice && (cachedProduct.DiscountedPrice == nil || *cachedProduct.DiscountedPrice == product.DiscountedPrice)
+	res := cachedProduct.RegularPrice == product.RegularPrice && (cachedProduct.SpecialPrice == nil || *cachedProduct.SpecialPrice == product.SpecialPrice)
 	return res
 }

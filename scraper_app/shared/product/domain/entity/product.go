@@ -16,7 +16,7 @@ type ScrapedProduct struct {
 	ID              string
 	Name            string
 	RegularPrice    float64
-	DiscountedPrice float64
+	SpecialPrice    float64
 	Image           string
 	BrandName       string
 	URL             string
@@ -27,16 +27,16 @@ type ScrapedProduct struct {
 func NewScrapedProduct(
 	name string,
 	regularPrice string,
-	discountedPrice string,
+	specialPrice string,
 	image string,
 	url string,
 ) *ScrapedProduct {
 	return &ScrapedProduct{
-		Name:            name,
-		RegularPrice:    parsePrice(regularPrice),
-		DiscountedPrice: parsePrice(discountedPrice),
-		Image:           image,
-		URL:             url,
+		Name:         name,
+		RegularPrice: parsePrice(regularPrice),
+		SpecialPrice: parsePrice(specialPrice),
+		Image:        image,
+		URL:          url,
 	}
 }
 

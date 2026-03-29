@@ -21,6 +21,6 @@ type ScraperConfig struct {
 type LaterScrapedProducts map[string]LaterScrapedProductPrices
 
 type LaterScrapedProductPrices struct {
-	CurrentPrice    float64
-	DiscountedPrice *float64
+	RegularPrice float64
+	SpecialPrice *float64
 }

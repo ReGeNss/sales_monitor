@@ -12,8 +12,8 @@ export class Price {
   @Property({ fieldName: 'regular_price', type: 'decimal', precision: 10, scale: 2 })
   regularPrice!: number;
 
-  @Property({ fieldName: 'discount_price', type: 'decimal', precision: 10, scale: 2, nullable: true })
-  discountPrice?: number;
+  @Property({ fieldName: 'special_price', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  specialPrice?: number;
 
   @Property({ fieldName: 'created_at', defaultRaw: 'CURRENT_TIMESTAMP' })
   createdAt!: Date;

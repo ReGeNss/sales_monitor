@@ -96,7 +96,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 						s.productRepository.AddPriceToMarketplaceProductID(
 							id,
 							product.RegularPrice,
-							&product.DiscountedPrice,
+							&product.SpecialPrice,
 						)
 					}
 
@@ -151,7 +151,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 						laterPrice, err := s.productRepository.GetLatestProductPrice(productID)
 						if err != nil {
 							log.Printf("could not get latest product price: %v", err)
-						} else if *laterPrice.DiscountPrice < product.DiscountedPrice {
+						} else if *laterPrice.SpecialPrice < product.SpecialPrice {
 							notificationProducts = append(notificationProducts, *foundProduct)
 						}
 					}
@@ -161,7 +161,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 						marketplaceID,
 						product.URL,
 						product.RegularPrice,
-						&product.DiscountedPrice,
+						&product.SpecialPrice,
 					)
 				}
 

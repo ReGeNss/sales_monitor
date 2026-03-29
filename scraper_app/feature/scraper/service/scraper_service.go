@@ -141,8 +141,8 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 		scrapingMetrics.SampleProductName = sample.Name
 		scrapingMetrics.SampleCategory = sample.Category
 		scrapingMetrics.SampleMarketplace = sample.Marketplace
-		if sample.DiscountedPrice > 0 {
-			scrapingMetrics.SampleProductPrice = sample.DiscountedPrice
+		if sample.SpecialPrice > 0 {
+			scrapingMetrics.SampleProductPrice = sample.SpecialPrice
 		} else {
 			scrapingMetrics.SampleProductPrice = sample.RegularPrice
 		}
@@ -155,7 +155,7 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 func countProductsOnSale(products []*entity.ScrapedProduct) int {
 	count := 0
 	for _, p := range products {
-		if p.DiscountedPrice > 0 && p.RegularPrice < p.DiscountedPrice {
+		if p.SpecialPrice > 0 && p.RegularPrice < p.SpecialPrice {
 			count++
 		}
 	}
@@ -163,11 +163,11 @@ func countProductsOnSale(products []*entity.ScrapedProduct) int {
 }
 
 type sampleProduct struct {
-	Name            string
-	RegularPrice    float64
-	DiscountedPrice float64
-	Category        string
-	Marketplace     string
+	Name         string
+	RegularPrice float64
+	SpecialPrice float64
+	Category     string
+	Marketplace  string
 }
 
 func extractSampleProduct(scrapedProducts map[string]*config.ScrapingResult) *sampleProduct {
@@ -182,11 +182,11 @@ func extractSampleProduct(scrapedProducts map[string]*config.ScrapingResult) *sa
 			p := sp.Products[0]
 			if p != nil && p.Name != "" {
 				return &sampleProduct{
-					Name:            p.Name,
-					RegularPrice:    p.RegularPrice,
-					DiscountedPrice: p.DiscountedPrice,
-					Category:        category,
-					Marketplace:     sp.MarketplaceName,
+					Name:         p.Name,
+					RegularPrice: p.RegularPrice,
+					SpecialPrice: p.SpecialPrice,
+					Category:     category,
+					Marketplace:  sp.MarketplaceName,
 				}
 			}
 		}

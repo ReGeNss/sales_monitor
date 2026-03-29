@@ -49,8 +49,8 @@ func (c *cachedScrapedProductsRepositoryImpl) GetCachedScrapedProducts(marketpla
 	laterScrapedProductsMap := make(map[string]entity.LaterScrapedProductPrices)
 	for _, price := range prices {
 		laterScrapedProductsMap[price.MarketplaceProduct.URL] = entity.LaterScrapedProductPrices{
-			CurrentPrice:    price.RegularPrice,
-			DiscountedPrice: price.DiscountPrice,
+			RegularPrice: price.RegularPrice,
+			SpecialPrice: price.SpecialPrice,
 		}
 	}
 

@@ -8,8 +8,8 @@ export class PriceItemDto {
   @ApiProperty({ example: 1299.99, description: 'Regular price' })
   regularPrice!: number;
 
-  @ApiPropertyOptional({ example: 999.99, description: 'Discounted price' })
-  discountPrice?: number;
+  @ApiPropertyOptional({ example: 999.99, description: 'Special price' })
+  specialPrice?: number;
 
   @ApiProperty({ example: '2026-02-15T12:00:00.000Z', description: 'Price record creation date' })
   createdAt!: Date;

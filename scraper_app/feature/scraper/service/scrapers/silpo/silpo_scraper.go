@@ -232,8 +232,8 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 
 		product := entity.NewScrapedProduct(
 			strings.TrimSpace(title),
-			currentPrice,
 			oldPrice,
+			currentPrice,
 			imgSrc,
 			"https://silpo.ua"+url,
 		)
