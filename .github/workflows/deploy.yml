@@ -26,7 +26,7 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED"
 
-          git merge origin/master --ff-only
+          git reset --hard origin/master
 
           SERVICES=""
 
@@ -48,6 +48,11 @@ jobs:
 
           if echo "$CHANGED" | grep -qE '^docker-compose\.yaml$'; then
             SERVICES="scheduler scraper_logs notifications_service api-monitor"
+          fi
+
+          if echo "$CHANGED" | grep -qE '^migrations/'; then
+            echo "Running database migrations..."
+            docker compose run --rm migrate
           fi
 
           SERVICES=$(echo "$SERVICES" | xargs)

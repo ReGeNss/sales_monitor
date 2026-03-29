@@ -1,7 +1,8 @@
-h1:8315mYWgBngTeZDoLIQF+y/rKobJjO5CsMkDHxFSM5U=
+h1:uQOfouANlgFFA1npHrhMvXnRrOLlxFKLOkGQp0MoHOw=
 01__init_tabels.sql h1:Hd38egNnQ3lUaAGfx/5UT75K8OrUSorQunGazFk1uLU=
 02__create_full_text_search_stop_words_table.sql h1:Bb4v+i+UlyUG+1mHJesdmFTDvbm2aD9xW9vkYLbz8HY=
 03__create_product_name_fingerprint_index.sql h1:g/cIvLNC55l2Gh8H0DRx519WItpKB3kyI7mx7wN1g7Q=
 04__create_brand_category_index.sql h1:4FieR68f/jhNxWLw6wZJrfkBkjVZcyatxg0BN1zaFuc=
 05__add_attibutes_to_product.sql h1:uAPVOLuyUJxg7Ja7UzRkBFrDRrlS+7VF//QviYBcClc=
 06__create_product_product_attributes_junction.sql h1:wbxX2DqNI3wpWQsSBEI502p8u8aBe+ZYPV+zmXMBvH0=
+07__rename_discount_price_to_special_price.sql h1:pc7M3FSBm8tTMEc3tpxvJADyGmcm8OEWxfBZ2ja0rRE=
