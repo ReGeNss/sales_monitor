@@ -20,8 +20,14 @@ func Run(plan scraper.ScrapingPlan) error {
 		cached_scraped_product_repository.NewCachedScrapedProductsRepository(db.GetDB()),
 	)
 
+	gormDB := db.GetDB()
 	productService := service.NewProductService(
-		repository.NewProductRepository(db.GetDB(), db.GetRedis()),
+		repository.NewProductRepository(gormDB),
+		repository.NewCategoryRepository(gormDB),
+		repository.NewBrandRepository(gormDB),
+		repository.NewMarketplaceRepository(gormDB),
+		repository.NewPriceRepository(gormDB),
+		repository.NewNotificationPublisher(db.GetRedis()),
 		domainservice.NewProductMatcher(),
 	)
 

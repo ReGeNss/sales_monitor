@@ -14,17 +14,32 @@ type ProductService interface {
 }
 
 type productServiceImpl struct {
-	productRepository repository.ProductRepository
-	productMatcher    domainservice.ProductMatcher
+	productRepository     repository.ProductRepository
+	categoryRepository    repository.CategoryRepository
+	brandRepository       repository.BrandRepository
+	marketplaceRepository repository.MarketplaceRepository
+	priceRepository       repository.PriceRepository
+	notificationPublisher repository.NotificationPublisher
+	productMatcher        domainservice.ProductMatcher
 }
 
 func NewProductService(
 	productRepository repository.ProductRepository,
+	categoryRepository repository.CategoryRepository,
+	brandRepository repository.BrandRepository,
+	marketplaceRepository repository.MarketplaceRepository,
+	priceRepository repository.PriceRepository,
+	notificationPublisher repository.NotificationPublisher,
 	productMatcher domainservice.ProductMatcher,
 ) ProductService {
 	return &productServiceImpl{
-		productRepository: productRepository,
-		productMatcher:    productMatcher,
+		productRepository:     productRepository,
+		categoryRepository:    categoryRepository,
+		brandRepository:       brandRepository,
+		marketplaceRepository: marketplaceRepository,
+		priceRepository:       priceRepository,
+		notificationPublisher: notificationPublisher,
+		productMatcher:        productMatcher,
 	}
 }
 
@@ -32,12 +47,12 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 	for categoryName, scrapedData := range scrapedData {
 
 		var categoryID int
-		category, err := s.productRepository.GetCategoryByName(categoryName)
+		category, err := s.categoryRepository.GetCategoryByName(categoryName)
 		if err != nil {
 			category = &entity.Category{
 				Name: categoryName,
 			}
-			s.productRepository.CreateCategory(category)
+			s.categoryRepository.CreateCategory(category)
 			categoryID = category.ID
 		} else {
 			categoryID = category.ID
@@ -49,12 +64,12 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 			}
 
 			var marketplaceID int
-			marketplace, err := s.productRepository.GetMarketplaceByName(data.MarketplaceName)
+			marketplace, err := s.marketplaceRepository.GetMarketplaceByName(data.MarketplaceName)
 			if err != nil {
 				marketplace = &entity.Marketplace{
 					Name: data.MarketplaceName,
 				}
-				s.productRepository.CreateMarketplace(marketplace)
+				s.marketplaceRepository.CreateMarketplace(marketplace)
 				marketplaceID = marketplace.ID
 			} else {
 				marketplaceID = marketplace.ID
@@ -63,7 +78,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 			brandProducts, unknownBrandProducts := groupProductsByBrand(data.Products)
 
 			if len(unknownBrandProducts) > 0 {
-				allBrands, err := s.productRepository.GetAllBrands()
+				allBrands, err := s.brandRepository.GetAllBrands()
 				if err != nil {
 					log.Printf("could not get all brands: %v", err)
 					continue
@@ -74,9 +89,9 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 
 			for brandName, products := range brandProducts {
 				var brandID int
-				brand, err := s.productRepository.GetBrandByName(brandName)
+				brand, err := s.brandRepository.GetBrandByName(brandName)
 				if err != nil {
-					id, err := s.productRepository.CreateBrand(&entity.Brand{
+					id, err := s.brandRepository.CreateBrand(&entity.Brand{
 						Name: brandName,
 					})
 					if err != nil {
@@ -88,7 +103,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 					brandID = brand.ID
 				}
 
-				laterScrapedProductsUrls, err := s.productRepository.GetLaterScrapedProducts(brandID)
+				laterScrapedProductsUrls, err := s.marketplaceRepository.GetLaterScrapedProducts(brandID)
 				if err != nil {
 					log.Printf("could not get later scraped products: %v", err)
 				}
@@ -97,7 +112,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 
 				for _, product := range products {
 					if id, ok := laterScrapedProductsUrls[product.URL]; ok {
-						s.productRepository.AddPriceToMarketplaceProductID(
+						s.marketplaceRepository.AddPriceToMarketplaceProductID(
 							id,
 							product.RegularPrice,
 							&product.SpecialPrice,
@@ -160,7 +175,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 					}
 
 					if foundProduct != nil {
-						laterPrice, err := s.productRepository.GetLatestProductPrice(productID)
+						laterPrice, err := s.priceRepository.GetLatestProductPrice(productID)
 						if err != nil {
 							log.Printf("could not get latest product price: %v", err)
 						} else if *laterPrice.SpecialPrice < product.SpecialPrice {
@@ -168,7 +183,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 						}
 					}
 
-					s.productRepository.AddPriceToMarketplaceProduct(
+					s.marketplaceRepository.AddPriceToMarketplaceProduct(
 						productID,
 						marketplaceID,
 						product.URL,
@@ -178,7 +193,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 				}
 
 				if len(notificationProducts) > 0 {
-					if err := s.productRepository.SendNotification(&entity.NotificationTask{
+					if err := s.notificationPublisher.SendNotification(&entity.NotificationTask{
 						BrandID:   brandID,
 						BrandName: brandName,
 						Products:  notificationProducts,

@@ -27,8 +27,14 @@ func main() {
 		log.Fatalf("failed to load scraped data: %v", err)
 	}
 
+	gormDB := db.GetDB()
 	productService := service.NewProductService(
-		repository.NewProductRepository(db.GetDB(), db.GetRedis()),
+		repository.NewProductRepository(gormDB),
+		repository.NewCategoryRepository(gormDB),
+		repository.NewBrandRepository(gormDB),
+		repository.NewMarketplaceRepository(gormDB),
+		repository.NewPriceRepository(gormDB),
+		repository.NewNotificationPublisher(db.GetRedis()),
 		domainservice.NewProductMatcher(),
 	)
 
