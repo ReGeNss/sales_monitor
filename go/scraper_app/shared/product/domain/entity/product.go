@@ -1,56 +1,11 @@
 package entity
 
-import (
-	"log"
-	"regexp"
-	"strconv"
-	"strings"
-)
-
-type ScrapedProducts struct {
-	Products []*ScrapedProduct
-	MarketplaceName string
-}
-
-type ScrapedProduct struct {
-	ID              string
+type Product struct {
+	ID              int
 	Name            string
-	RegularPrice    float64
-	SpecialPrice    float64
-	Image           string
-	BrandName       string
-	URL             string
-	Volume          string
-	Weight          string
-}
-
-func NewScrapedProduct(
-	name string,
-	regularPrice string,
-	specialPrice string,
-	image string,
-	url string,
-) *ScrapedProduct {
-	return &ScrapedProduct{
-		Name:         name,
-		RegularPrice: parsePrice(regularPrice),
-		SpecialPrice: parsePrice(specialPrice),
-		Image:        image,
-		URL:          url,
-	}
-}
-
-func parsePrice(priceText string) float64 {
-	re := regexp.MustCompile(`[^\d.,]`)
-	cleaned := re.ReplaceAllString(priceText, "")
-
-	cleaned = strings.Replace(cleaned, ",", ".", -1)
-
-	price, err := strconv.ParseFloat(cleaned, 64)
-	if err != nil {
-		log.Printf("could not parse price '%s': %v", priceText, err)
-		return 0.0
-	}
-
-	return price
+	NameFingerprint *string
+	ImageURL        string
+	BrandID         int
+	CategoryID      int
+	Attributes      []*ProductAttribute
 }

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"sales_monitor/internal/models"
-	"sales_monitor/scraper_app/core/api"
 	"sales_monitor/scraper_app/core/env"
+	"sales_monitor/scraper_app/shared/product/data/mapper"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	"sales_monitor/scraper_app/shared/product/utils"
@@ -18,11 +18,10 @@ import (
 
 type productRepositoryImpl struct {
 	db          *gorm.DB
-	httpClient  api.HTTPClient
 	redisClient *redis.Client
 }
 
-func (p *productRepositoryImpl) GetLatestProductPrice(productID int) (*models.Price, error) {
+func (p *productRepositoryImpl) GetLatestProductPrice(productID int) (*entity.Price, error) {
 	var price models.Price
 	err := p.db.Model(&models.Price{}).
 		Joins("JOIN marketplace_products mp ON mp.marketplace_product_id = prices.marketplace_product_id").
@@ -32,76 +31,84 @@ func (p *productRepositoryImpl) GetLatestProductPrice(productID int) (*models.Pr
 	if err != nil {
 		return nil, err
 	}
-	return &price, nil
+	return mapper.PriceToEntity(&price), nil
 }
 
-func (p *productRepositoryImpl) SendNotification(notificationTask *models.NotificationTask) error {
+func (p *productRepositoryImpl) SendNotification(notificationTask *entity.NotificationTask) error {
 	if notificationTask == nil {
 		return fmt.Errorf("notification task is nil")
 	}
-	
+
 	if p.redisClient == nil {
 		return fmt.Errorf("redis client is not initialized")
 	}
-	
-	json, err := json.Marshal(notificationTask)
+
+	payload, err := json.Marshal(mapper.NotificationTaskToModel(notificationTask))
 	if err != nil {
 		return err
 	}
-	return p.redisClient.LPush(context.Background(), env.GetNotificationQueueKey(), string(json)).Err()
+	return p.redisClient.LPush(context.Background(), env.GetNotificationQueueKey(), string(payload)).Err()
 }
 
-func NewProductRepository(db *gorm.DB, httpClient api.HTTPClient, redisClient *redis.Client) repository.ProductRepository {
+func NewProductRepository(db *gorm.DB, redisClient *redis.Client) repository.ProductRepository {
 	return &productRepositoryImpl{
 		db:          db,
-		httpClient:  httpClient,
 		redisClient: redisClient,
 	}
 }
 
-func (p *productRepositoryImpl) CreateBrand(brand *models.Brand) (uint, error) {
-	p.db.Model(&models.Brand{}).Create(brand)
-
-	return uint(brand.BrandID), p.db.Error
+func (p *productRepositoryImpl) CreateBrand(brand *entity.Brand) (uint, error) {
+	m := mapper.BrandToModel(brand)
+	if err := p.db.Model(&models.Brand{}).Create(m).Error; err != nil {
+		return 0, err
+	}
+	brand.ID = m.BrandID
+	return uint(m.BrandID), nil
 }
 
-func (p *productRepositoryImpl) CreateCategory(category *models.Category) (uint, error) {
-	p.db.Model(&models.Category{}).Create(category)
-
-	return uint(category.CategoryID), p.db.Error
+func (p *productRepositoryImpl) CreateCategory(category *entity.Category) (uint, error) {
+	m := mapper.CategoryToModel(category)
+	if err := p.db.Model(&models.Category{}).Create(m).Error; err != nil {
+		return 0, err
+	}
+	category.ID = m.CategoryID
+	return uint(m.CategoryID), nil
 }
 
-func (p *productRepositoryImpl) CreateMarketplace(marketplace *models.Marketplace) (uint, error) {
-	p.db.Model(&models.Marketplace{}).Create(marketplace)
-
-	return uint(marketplace.MarketplaceID), p.db.Error
+func (p *productRepositoryImpl) CreateMarketplace(marketplace *entity.Marketplace) (uint, error) {
+	m := mapper.MarketplaceToModel(marketplace)
+	if err := p.db.Model(&models.Marketplace{}).Create(m).Error; err != nil {
+		return 0, err
+	}
+	marketplace.ID = m.MarketplaceID
+	return uint(m.MarketplaceID), nil
 }
 
-func (p *productRepositoryImpl) GetBrandByName(name string) (*models.Brand, error) {
+func (p *productRepositoryImpl) GetBrandByName(name string) (*entity.Brand, error) {
 	var brand models.Brand
 	err := p.db.Model(&models.Brand{}).Where("name = ?", name).First(&brand).Error
 	if err != nil {
 		return nil, err
 	}
-	return &brand, nil
+	return mapper.BrandToEntity(&brand), nil
 }
 
-func (p *productRepositoryImpl) GetCategoryByName(name string) (*models.Category, error) {
+func (p *productRepositoryImpl) GetCategoryByName(name string) (*entity.Category, error) {
 	var category models.Category
 	err := p.db.Model(&models.Category{}).Where("name = ?", name).First(&category).Error
 	if err != nil {
 		return nil, err
 	}
-	return &category, nil
+	return mapper.CategoryToEntity(&category), nil
 }
 
-func (p *productRepositoryImpl) GetMarketplaceByName(name string) (*models.Marketplace, error) {
+func (p *productRepositoryImpl) GetMarketplaceByName(name string) (*entity.Marketplace, error) {
 	var marketplace models.Marketplace
 	err := p.db.Model(&models.Marketplace{}).Where("name = ?", name).First(&marketplace).Error
 	if err != nil {
 		return nil, err
 	}
-	return &marketplace, nil
+	return mapper.MarketplaceToEntity(&marketplace), nil
 }
 
 func (p *productRepositoryImpl) AddPriceToMarketplaceProduct(productID int, marketplaceID int, url string, regularPrice float64, specialPrice *float64) error {
@@ -136,34 +143,38 @@ func (p *productRepositoryImpl) AddPriceToMarketplaceProductID(marketplaceProduc
 	return p.db.Model(&models.Price{}).Create(&price).Error
 }
 
-func (p *productRepositoryImpl) CreateProduct(product *models.Product, attributes []*models.ProductAttribute) (uint, error) {
+func (p *productRepositoryImpl) CreateProduct(product *entity.Product, attributes []*entity.ProductAttribute) (uint, error) {
+	productModel := mapper.ProductToModel(product)
 	var productAttributes []models.ProductAttribute
 
 	err := p.db.Model(&models.Product{}).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&models.Product{}).Create(product).Error; err != nil {
+		if err := tx.Model(&models.Product{}).Create(productModel).Error; err != nil {
 			return err
 		}
 
 		for _, attr := range attributes {
+			attrModel := mapper.ProductAttributeToModel(attr)
 			var existingAttr models.ProductAttribute
 			err := tx.Model(&models.ProductAttribute{}).
-				Where("attribute_type = ? AND value = ?", attr.AttributeType, attr.Value).
+				Where("attribute_type = ? AND value = ?", attrModel.AttributeType, attrModel.Value).
 				First(&existingAttr).Error
 
 			if err == gorm.ErrRecordNotFound {
-				if err := tx.Model(&models.ProductAttribute{}).Create(attr).Error; err != nil {
+				if err := tx.Model(&models.ProductAttribute{}).Create(attrModel).Error; err != nil {
 					return err
 				}
-				productAttributes = append(productAttributes, *attr)
+				attr.ID = attrModel.AttributeID
+				productAttributes = append(productAttributes, *attrModel)
 			} else if err != nil {
 				return err
 			} else {
+				attr.ID = existingAttr.AttributeID
 				productAttributes = append(productAttributes, existingAttr)
 			}
 		}
 
 		if len(productAttributes) > 0 {
-			if err := tx.Model(product).Association("Attributes").Append(productAttributes); err != nil {
+			if err := tx.Model(productModel).Association("Attributes").Append(productAttributes); err != nil {
 				return err
 			}
 		}
@@ -171,10 +182,11 @@ func (p *productRepositoryImpl) CreateProduct(product *models.Product, attribute
 		return nil
 	})
 
-	return uint(product.ProductID), err
+	product.ID = productModel.ProductID
+	return uint(productModel.ProductID), err
 }
 
-func (p *productRepositoryImpl) GetMostSimilarProduct(fingerprint *string, attributes []*models.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (*models.Product, error) {
+func (p *productRepositoryImpl) GetMostSimilarProduct(fingerprint *string, attributes []*entity.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (*entity.Product, error) {
 	var products []models.Product
 
 	query := p.db.Model(&models.Product{}).Table("products as p").
@@ -190,7 +202,7 @@ func (p *productRepositoryImpl) GetMostSimilarProduct(fingerprint *string, attri
 		if err != nil {
 			return nil, err
 		}
-		return &product, nil
+		return mapper.ProductToEntity(&product), nil
 	}
 
 	err := query.Where("MATCH(p.name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0", *fingerprint).
@@ -214,13 +226,13 @@ func (p *productRepositoryImpl) GetMostSimilarProduct(fingerprint *string, attri
 	}
 
 	if bestSimilarity >= 91 && utils.ProductDifferentiator(*fingerprint, *bestProduct.NameFingerprint, productDifferentiationEntity) {
-		return &bestProduct, nil
+		return mapper.ProductToEntity(&bestProduct), nil
 	}
 
 	return nil, fmt.Errorf("no similar product found")
 }
 
-func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint *string, brandID int, categoryID int, attributes []*models.ProductAttribute) (*models.Product, error) {
+func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint *string, brandID int, categoryID int, attributes []*entity.ProductAttribute) (*entity.Product, error) {
 	var product models.Product
 	query := p.db.Model(&models.Product{}).Table("products as p").Where("p.name_fingerprint = ? AND p.brand_id = ? AND p.category_id = ?", fingerprint, brandID, categoryID)
 	query = attributesToQuery(attributes, query)
@@ -228,32 +240,37 @@ func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint *string, bra
 	if err := query.First(&product).Error; err != nil {
 		return nil, err
 	}
-	return &product, nil
+	return mapper.ProductToEntity(&product), nil
 }
 
-func (p *productRepositoryImpl) CreateProductAttribute(attribute *models.ProductAttribute) error {
-	return p.db.Model(&models.ProductAttribute{}).Create(attribute).Error
+func (p *productRepositoryImpl) CreateProductAttribute(attribute *entity.ProductAttribute) error {
+	m := mapper.ProductAttributeToModel(attribute)
+	if err := p.db.Model(&models.ProductAttribute{}).Create(m).Error; err != nil {
+		return err
+	}
+	attribute.ID = m.AttributeID
+	return nil
 }
 
-func attributesToQuery(attributes []*models.ProductAttribute, query *gorm.DB) *gorm.DB {
+func attributesToQuery(attributes []*entity.ProductAttribute, query *gorm.DB) *gorm.DB {
 	for i, attribute := range attributes {
 		query = query.Joins(fmt.Sprintf("JOIN product_attributes pa%[1]d ON pa%[1]d.product_id = p.product_id", i)).
 			Joins(fmt.Sprintf("JOIN attributes attr%[1]d ON attr%[1]d.attribute_id = pa%[1]d.attribute_id", i)).
 			Where(fmt.Sprintf("attr%[1]d.attribute_type = ? AND attr%[1]d.value = ?", i),
-				attribute.AttributeType,
+				attribute.Type,
 				attribute.Value,
 			)
 	}
 	return query
 }
 
-func (p *productRepositoryImpl) GetAllBrands() ([]models.Brand, error) {
+func (p *productRepositoryImpl) GetAllBrands() ([]*entity.Brand, error) {
 	var brands []models.Brand
 	err := p.db.Model(&models.Brand{}).Find(&brands).Error
 	if err != nil {
 		return nil, err
 	}
-	return brands, nil
+	return mapper.BrandsToEntities(brands), nil
 }
 
 func (p *productRepositoryImpl) GetLaterScrapedProducts(brandID int) (entity.LaterScrapedProductsUrls, error) {

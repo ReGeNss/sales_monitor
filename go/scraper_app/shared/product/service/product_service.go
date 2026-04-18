@@ -2,7 +2,6 @@ package service
 
 import (
 	"log"
-	"sales_monitor/internal/models"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
@@ -30,13 +29,13 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 		var categoryID int
 		category, err := s.productRepository.GetCategoryByName(categoryName)
 		if err != nil {
-			category = &models.Category{
+			category = &entity.Category{
 				Name: categoryName,
 			}
 			s.productRepository.CreateCategory(category)
-			categoryID = category.CategoryID
+			categoryID = category.ID
 		} else {
-			categoryID = category.CategoryID
+			categoryID = category.ID
 		}
 
 		for _, data := range scrapedData.ScrapedProducts {
@@ -47,13 +46,13 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 			var marketplaceID int
 			marketplace, err := s.productRepository.GetMarketplaceByName(data.MarketplaceName)
 			if err != nil {
-				marketplace = &models.Marketplace{
+				marketplace = &entity.Marketplace{
 					Name: data.MarketplaceName,
 				}
 				s.productRepository.CreateMarketplace(marketplace)
-				marketplaceID = marketplace.MarketplaceID
+				marketplaceID = marketplace.ID
 			} else {
-				marketplaceID = marketplace.MarketplaceID
+				marketplaceID = marketplace.ID
 			}
 
 			brandProducts, unknownBrandProducts := groupProductsByBrand(data.Products)
@@ -72,7 +71,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 				var brandID int
 				brand, err := s.productRepository.GetBrandByName(brandName)
 				if err != nil {
-					id, err := s.productRepository.CreateBrand(&models.Brand{
+					id, err := s.productRepository.CreateBrand(&entity.Brand{
 						Name: brandName,
 					})
 					if err != nil {
@@ -81,7 +80,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 					}
 					brandID = int(id)
 				} else {
-					brandID = brand.BrandID
+					brandID = brand.ID
 				}
 
 				laterScrapedProductsUrls, err := s.productRepository.GetLaterScrapedProducts(brandID)
@@ -89,7 +88,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 					log.Printf("could not get later scraped products: %v", err)
 				}
 
-				notificationProducts := []models.Product{}
+				notificationProducts := []*entity.Product{}
 
 				for _, product := range products {
 					if id, ok := laterScrapedProductsUrls[product.URL]; ok {
@@ -101,23 +100,23 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 					}
 
 					fingerprint := utils.NormalizeProductName(product.Name, append([]string{strings.ToLower(brandName), strings.ToLower(categoryName)}, scrapedData.WordsToIgnore...))
-					attributes := []*models.ProductAttribute{}
+					attributes := []*entity.ProductAttribute{}
 
 					if product.Volume != "" {
-						attributes = append(attributes, &models.ProductAttribute{
-							AttributeType: models.VOLUME,
-							Value:         product.Volume,
+						attributes = append(attributes, &entity.ProductAttribute{
+							Type:  entity.AttributeTypeVolume,
+							Value: product.Volume,
 						})
 					}
 					if product.Weight != "" {
-						attributes = append(attributes, &models.ProductAttribute{
-							AttributeType: models.WEIGHT,
-							Value:         product.Weight,
+						attributes = append(attributes, &entity.ProductAttribute{
+							Type:  entity.AttributeTypeWeight,
+							Value: product.Weight,
 						})
 					}
 
 					var productID int
-					var foundProduct *models.Product
+					var foundProduct *entity.Product
 
 					existingProduct, err := s.productRepository.GetProductByFingerprint(fingerprint, brandID, categoryID, attributes)
 
@@ -125,7 +124,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 						matchedProduct, err := s.productRepository.GetMostSimilarProduct(fingerprint, attributes, scrapedData.ProductDifferentiationEntity, brandID, categoryID, marketplaceID)
 						if err != nil {
 
-							id, err := s.productRepository.CreateProduct(&models.Product{
+							id, err := s.productRepository.CreateProduct(&entity.Product{
 								Name:            product.Name,
 								NameFingerprint: fingerprint,
 								ImageURL:        product.Image,
@@ -140,19 +139,19 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 							productID = int(id)
 						} else {
 							foundProduct = matchedProduct
-							productID = matchedProduct.ProductID
+							productID = matchedProduct.ID
 						}
 					} else {
 						foundProduct = existingProduct
-						productID = existingProduct.ProductID
+						productID = existingProduct.ID
 					}
 
-					if(foundProduct != nil) {
+					if foundProduct != nil {
 						laterPrice, err := s.productRepository.GetLatestProductPrice(productID)
 						if err != nil {
 							log.Printf("could not get latest product price: %v", err)
 						} else if *laterPrice.SpecialPrice < product.SpecialPrice {
-							notificationProducts = append(notificationProducts, *foundProduct)
+							notificationProducts = append(notificationProducts, foundProduct)
 						}
 					}
 
@@ -166,10 +165,10 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 				}
 
 				if len(notificationProducts) > 0 {
-					if err := s.productRepository.SendNotification(&models.NotificationTask{
-						BrandID: brandID,
-						BrandName: brandName, 
-						Products: notificationProducts,
+					if err := s.productRepository.SendNotification(&entity.NotificationTask{
+						BrandID:   brandID,
+						BrandName: brandName,
+						Products:  notificationProducts,
 					}); err != nil {
 						log.Printf("could not send notification: %v", err)
 					}
@@ -196,7 +195,7 @@ func groupProductsByBrand(products []*entity.ScrapedProduct) (map[string][]*enti
 	return brandProducts, unknownBrandProducts
 }
 
-func getBrandsFromProductName(unknownBrandProducts []*entity.ScrapedProduct, brandProducts map[string][]*entity.ScrapedProduct, allBrands []models.Brand) map[string][]*entity.ScrapedProduct {
+func getBrandsFromProductName(unknownBrandProducts []*entity.ScrapedProduct, brandProducts map[string][]*entity.ScrapedProduct, allBrands []*entity.Brand) map[string][]*entity.ScrapedProduct {
 	brands := map[string]interface{}{}
 
 	for brandName := range brandProducts {

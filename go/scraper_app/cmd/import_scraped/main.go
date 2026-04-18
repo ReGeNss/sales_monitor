@@ -9,7 +9,6 @@ import (
 	"github.com/joho/godotenv"
 
 	"sales_monitor/internal/db"
-	"sales_monitor/scraper_app/core/api"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/data/repository"
 	"sales_monitor/scraper_app/shared/product/service"
@@ -28,7 +27,7 @@ func main() {
 	}
 
 	productService := service.NewProductService(
-		repository.NewProductRepository(db.GetDB(), api.NewHTTPClient(), db.GetRedis()),
+		repository.NewProductRepository(db.GetDB(), db.GetRedis()),
 	)
 
 	productService.ProcessProducts(scrapedData)

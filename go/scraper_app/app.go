@@ -4,8 +4,7 @@ import (
 	"log"
 
 	"sales_monitor/internal/db"
-	"sales_monitor/scraper_app/core/api"
-	cached_scraped_product_repository "sales_monitor/scraper_app/feature/scraper/data/repository"
+  	cached_scraped_product_repository "sales_monitor/scraper_app/feature/scraper/data/repository"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	cached_scraped_product_service "sales_monitor/scraper_app/feature/scraper/service"
 	scraper_service "sales_monitor/scraper_app/feature/scraper/service"
@@ -21,7 +20,7 @@ func Run(plan scraper.ScrapingPlan) error {
 	)
 
 	productService := service.NewProductService(
-		repository.NewProductRepository(db.GetDB(), api.NewHTTPClient(), db.GetRedis()),
+		repository.NewProductRepository(db.GetDB(), db.GetRedis()),
 	)
 
 	scraperService := scraper_service.NewScraperService(
