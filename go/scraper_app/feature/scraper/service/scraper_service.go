@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	config "sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/feature/scraper/service/scrapers"
 	"sales_monitor/scraper_app/metrics"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
@@ -20,19 +21,19 @@ type ScraperService interface {
 }
 
 type scraperServiceImpl struct {
-	configuration  config.ScrapingPlan
-	productService service.ProductService
+	configuration               config.ScrapingPlan
+	productService              service.ProductService
 	cachedScrapedProductService CachedScrapedProductService
 }
 
 func NewScraperService(
-	configuration config.ScrapingPlan, 
-	productService service.ProductService, 
+	configuration config.ScrapingPlan,
+	productService service.ProductService,
 	cachedScrapedProductService CachedScrapedProductService,
-	) ScraperService {
+) ScraperService {
 	return &scraperServiceImpl{
-		configuration:  configuration,
-		productService: productService,
+		configuration:               configuration,
+		productService:              productService,
 		cachedScrapedProductService: cachedScrapedProductService,
 	}
 }
@@ -54,7 +55,7 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 			},
 		},
 	)
-	
+
 	if err != nil {
 		log.Fatalf("could not launch browser: %v", err)
 	}
@@ -62,33 +63,54 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 	for _, scrapingCategory := range s.configuration.Categories {
 		for _, scraperConfig := range scrapingCategory.ScrapersConfigs {
 			for _, url := range scraperConfig.URLs {
-				cachedProducts, err := s.cachedScrapedProductService.GetCachedScrapedProducts(scraperConfig.Scraper.GetMarketplaceName(), scrapingCategory.Category)
+				scraper, err := scrapers.GetScraperByShopName(scraperConfig.ShopID, browser)
+				if err != nil {
+					log.Fatalf("could not get scraper for shop %s: %v", scraperConfig.ShopID, err)
+				}
+
+				cachedProducts, err := s.cachedScrapedProductService.GetCachedScrapedProducts(scraper.GetMarketplaceName(), scrapingCategory.Category)
 				if err != nil {
 					log.Printf("error getting cached scraped products: %v", err)
 					cachedProducts = nil
 				}
 
-				result := scraperConfig.Scraper.Scrape(
+				result := scraper.Scrape(
 					browser,
 					url,
-					scrapingCategory.WordsToIgnore,
 					cachedProducts,
 				)
-				products := result.Products
+
+				products := []*entity.ScrapedProduct{}
+
+				for _, p := range result.Products {
+					product, _ := entity.NewScrapedProduct(
+						p.Name,
+						p.RegularPrice,
+						p.SpecialPrice,
+						p.ImageURL,
+						p.URL,
+						p.BrandName,
+						p.Volume,
+						p.Weight,
+						scrapingCategory.WordsToIgnore,
+					)
+					if product != nil {
+						products = append(products, product)
+					}
+				}
 
 				if scrapedProducts[scrapingCategory.Category] == nil {
 					scrapedProducts[scrapingCategory.Category] = &config.ScrapingResult{
 						ScrapedProducts: []*entity.ScrapedProducts{{
 							Products:        products,
-							MarketplaceName: scraperConfig.Scraper.GetMarketplaceName(),
+							MarketplaceName: scraper.GetMarketplaceName(),
 						}},
-						WordsToIgnore:                scrapingCategory.WordsToIgnore,
 						ProductDifferentiationEntity: scrapingCategory.ProductDifferentiationEntity,
 					}
 				} else {
 					scrapedProducts[scrapingCategory.Category].ScrapedProducts = append(scrapedProducts[scrapingCategory.Category].ScrapedProducts, &entity.ScrapedProducts{
 						Products:        products,
-						MarketplaceName: scraperConfig.Scraper.GetMarketplaceName(),
+						MarketplaceName: scraper.GetMarketplaceName(),
 					})
 				}
 
@@ -106,7 +128,7 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 				totalOnSale += onSale
 
 				log.Printf("[%s] found: %d, scraped: %d, new: %d, on sale: %d",
-					scraperConfig.Scraper.GetMarketplaceName(),
+					scraper.GetMarketplaceName(),
 					result.FoundCount, len(validProducts), result.NewCount, onSale)
 			}
 		}

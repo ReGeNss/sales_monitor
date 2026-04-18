@@ -1,10 +1,12 @@
 package entity
 
 import (
-	"log"
+	"fmt"
 	"regexp"
-	"strconv"
+	regexps "sales_monitor/scraper_app/core/regexp"
+	"slices"
 	"strings"
+	"unicode/utf8"
 )
 
 type ScrapedProducts struct {
@@ -13,7 +15,6 @@ type ScrapedProducts struct {
 }
 
 type ScrapedProduct struct {
-	ID           string
 	Name         string
 	RegularPrice float64
 	SpecialPrice float64
@@ -26,31 +27,92 @@ type ScrapedProduct struct {
 
 func NewScrapedProduct(
 	name string,
-	regularPrice string,
-	specialPrice string,
+	regularPrice float64,
+	specialPrice float64,
 	image string,
 	url string,
-) *ScrapedProduct {
-	return &ScrapedProduct{
-		Name:         name,
-		RegularPrice: parsePrice(regularPrice),
-		SpecialPrice: parsePrice(specialPrice),
-		Image:        image,
-		URL:          url,
+	brandName string,
+	volume string,
+	weight string,
+	wordsToIgnore []string,
+) (*ScrapedProduct, error) {
+	var validName = strings.TrimSpace(name)
+	if validName == "" {
+		return nil, nil // TODO: create domain error
 	}
+
+	validName = replaceIgnoredWords(validName, wordsToIgnore)
+	
+	var validBrandName = strings.TrimSpace(brandName)
+	if validBrandName == "" {
+		return nil, nil // TODO: create domain error
+	}
+
+	var validUrl = strings.TrimSpace(url)
+	if validUrl == "" {
+		return nil, nil // TODO: create domain error
+	}
+
+	return &ScrapedProduct{
+		Name:         validName,
+		RegularPrice: regularPrice,
+		SpecialPrice: specialPrice,
+		Image:        image,
+		BrandName:    validBrandName,
+		URL:          validUrl,
+		Volume:       volume,
+		Weight:       weight,
+	}, nil
 }
 
-func parsePrice(priceText string) float64 {
-	re := regexp.MustCompile(`[^\d.,]`)
-	cleaned := re.ReplaceAllString(priceText, "")
+func (s *ScrapedProduct) GetFingerprint(wordsToIgnore []string) *string {
+	wordsToIgnore = append(wordsToIgnore, s.BrandName)
+	loweredName := strings.ToLower(s.Name)
 
-	cleaned = strings.Replace(cleaned, ",", ".", -1)
+	gramsRegex := regexp.MustCompile(regexps.GramsRegex)
+	gramsFormatted := gramsRegex.ReplaceAllString(loweredName, "")
+	
+	kilogramRegex := regexp.MustCompile(regexps.KilogramRegex)
+	kilogramFormatted := kilogramRegex.ReplaceAllString(gramsFormatted, "")
 
-	price, err := strconv.ParseFloat(cleaned, 64)
-	if err != nil {
-		log.Printf("could not parse price '%s': %v", priceText, err)
-		return 0.0
+	cleaned := kilogramFormatted
+	for _, word := range wordsToIgnore {
+		cleaned = strings.ReplaceAll(cleaned, strings.ToLower(word), "")
 	}
 
-	return price
+	volumeRegex := regexp.MustCompile(regexps.VolumeMilliliterRegex)
+	cleaned = volumeRegex.ReplaceAllString(cleaned, "")
+
+	specialCharactersRegex := regexp.MustCompile(`[^\p{L}\p{N}\s]`)
+	cleanedSpecialCharacters := specialCharactersRegex.ReplaceAllString(cleaned, "")
+	
+	words := strings.Fields(cleanedSpecialCharacters)
+
+	deletedSmallWords := []string{}
+	for _, word := range words {
+		if utf8.RuneCountInString(word) > 1 {
+			deletedSmallWords = append(deletedSmallWords, word)
+		}
+	}
+
+	slices.SortFunc(deletedSmallWords, func(a, b string) int {
+		return strings.Compare(a, b)
+	})
+
+	normalizedName := strings.Join(deletedSmallWords, " ")
+	
+	if normalizedName == "" {
+		return nil
+	}
+
+	return &normalizedName
+}
+
+func replaceIgnoredWords(title string, wordsToIgnore []string) string {
+    pattern := fmt.Sprintf("(?i)(%s)", strings.Join(wordsToIgnore, "|")) 
+    re := regexp.MustCompile(pattern)
+    
+    result := re.ReplaceAllString(title, "")
+    
+    return result
 }

@@ -5,22 +5,25 @@ import (
 	"log"
 	"math"
 	"regexp"
+	"sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/feature/scraper/service/dto"
 	"sales_monitor/scraper_app/feature/scraper/utils"
-	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
-	"sales_monitor/scraper_app/shared/product/domain/entity"
+
 	"strconv"
 	"strings"
 
 	"github.com/playwright-community/playwright-go"
 )
 
-type AtbScraper struct{}
+type AtbScraper struct{
+	Browser playwright.Browser
+}
 
 func (s *AtbScraper) GetMarketplaceName() string {
 	return "АТБ"
 }
 
-func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts *scraper_config.LaterScrapedProducts) *scraper_config.ScrapeResult {
+func (s *AtbScraper) Scrape(browser playwright.Browser, url string, cachedProducts *entity.LaterScrapedProducts) *dto.ScrapeResult {
 	page, err := utils.OpenPage(browser)
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
@@ -35,10 +38,10 @@ func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnor
 
 	countOfAllPages := getCountOfAllPages(page)
 
-	var products []*entity.ScrapedProduct
+	var products []*dto.ScrapedProductDto
 
 	for i := 1; i < countOfAllPages; i++ {
-		products = append(products, getProducts(page, wordsToIgnore)...)
+		products = append(products, getProducts(page)...)
 		page.Close()
 
 		page, err = utils.OpenPage(browser)
@@ -50,10 +53,10 @@ func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnor
 		page.WaitForLoadState()
 	}
 
-	products = append(products, getProducts(page, wordsToIgnore)...)
+	products = append(products, getProducts(page)...)
 	page.Close()
 
-	productsWithBrand := []*entity.ScrapedProduct{}
+	productsWithBrand := []*dto.ScrapedProductDto{}
 	newCount := 0
 	for _, product := range products {
 		inCache := false
@@ -89,7 +92,7 @@ func (s *AtbScraper) Scrape(browser playwright.Browser, url string, wordsToIgnor
 		})()
 	}
 
-	return &scraper_config.ScrapeResult{
+	return &dto.ScrapeResult{
 		Products:   productsWithBrand,
 		FoundCount: len(products),
 		NewCount:   newCount,
@@ -123,8 +126,8 @@ func getCountOfAllPages(page playwright.Page) int {
 	return int(math.Ceil(float64(countAll) / float64(countPerPage)))
 }
 
-func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.ScrapedProduct {
-	products := []*entity.ScrapedProduct{}
+func getProducts(page playwright.Page) []*dto.ScrapedProductDto {
+	products := []*dto.ScrapedProductDto{}
 
 	items, ok := page.Locator(".catalog-item").All()
 	if ok != nil {
@@ -167,8 +170,6 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 			continue
 		}
 
-		title = utils.ReplaceIgnoredWords(title, wordsToIgnore)
-
 		imgElement := item.Locator(".catalog-item__img")
 		imgSrc, err := imgElement.GetAttribute("src")
 		if err != nil {
@@ -177,7 +178,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 			imgSrc = ""
 		}
 
-		product := entity.NewScrapedProduct(
+		product := dto.CreateScrapedProductDto(
 			strings.TrimSpace(title),
 			oldPrice,
 			currentPrice,
@@ -192,7 +193,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 	return products
 }
 
-func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
+func getProductDetails(page playwright.Page, product *dto.ScrapedProductDto) (*dto.ScrapedProductDto, error) {
 	brandElement, err := page.Locator(".product-characteristics__item").All()
 	if err != nil {
 		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "atb_brand_elements", URL: product.URL})
@@ -218,14 +219,14 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 		if elementTitle == "Об’єм" {
 			volume, err := getProductAttributeValue(page, item, product.URL)
 			if err == nil {
-				utils.ScraperSetVolumeOrWeight(volume, product)
+				product.ScraperSetVolumeOrWeight(volume)
 			}
 		}
 
 		if elementTitle == "Вага" {
 			weight, err := getProductAttributeValue(page, item, product.URL)
 			if err == nil {
-				utils.ScraperSetVolumeOrWeight(weight, product)
+				product.ScraperSetVolumeOrWeight(weight)
 			}
 		}
 	}

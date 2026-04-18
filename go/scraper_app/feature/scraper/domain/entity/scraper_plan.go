@@ -15,7 +15,7 @@ type ScrapingCategory struct {
 
 type ScraperConfig struct {
 	URLs    []string
-	Scraper Scraper
+	ShopID 	string
 }
 
 type LaterScrapedProducts map[string]LaterScrapedProductPrices

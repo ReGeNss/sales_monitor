@@ -2,20 +2,27 @@ package fora
 
 import (
 	"log"
-	"sales_monitor/scraper_app/feature/scraper/utils"
-	"sales_monitor/scraper_app/shared/product/domain/entity"
 	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/feature/scraper/service/dto"
+	"sales_monitor/scraper_app/feature/scraper/utils"
 	"strings"
+
 	"github.com/playwright-community/playwright-go"
 )
 
-type ForaScraper struct {}
+type ForaScraper struct {
+	Browser playwright.Browser
+}
+
+func NewForaScraper(browser playwright.Browser) *ForaScraper {
+	return &ForaScraper{Browser: browser}
+}
 
 func (s *ForaScraper) GetMarketplaceName() string {
 	return "Фора"
 }
 
-func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts *scraper_config.LaterScrapedProducts) *scraper_config.ScrapeResult {
+func (s *ForaScraper) Scrape(browser playwright.Browser, url string, cachedProducts *scraper_config.LaterScrapedProducts) *dto.ScrapeResult {
 	context, err := browser.NewContext()
 	if err != nil {
 		log.Fatalf("could not create context: %v", err)
@@ -38,10 +45,10 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgno
 		}
 	}
 
-	products := getProducts(page, wordsToIgnore)
+	products := getProducts(page)
 	page.Close()
 	
-	productsWithBrand := []*entity.ScrapedProduct{}
+	productsWithBrand := []*dto.ScrapedProductDto{}
 	newCount := 0
 	for _, product := range products {
 		inCache := false
@@ -79,15 +86,15 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, wordsToIgno
 		})()
 	}
 
-	return &scraper_config.ScrapeResult{
+	return &dto.ScrapeResult{
 		Products:   productsWithBrand,
 		FoundCount: len(products),
 		NewCount:   newCount,
 	}
 }
 
-func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.ScrapedProduct {
-	products := []*entity.ScrapedProduct{}
+func getProducts(page playwright.Page) []*dto.ScrapedProductDto {
+	products := []*dto.ScrapedProductDto{}
 
 	items, err := page.Locator(".product-list-item").All()
 	if err != nil {
@@ -147,8 +154,6 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 			continue
 		}
 
-		title = utils.ReplaceIgnoredWords(title, wordsToIgnore)
-
 		imgElement := item.Locator(".product-list-item__image")
 		imgSrc, err := imgElement.GetAttribute("src")
 		if err != nil {
@@ -157,8 +162,8 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 			imgSrc = ""
 		}
 
-		product := entity.NewScrapedProduct(
-			strings.TrimSpace(title),
+		product := dto.CreateScrapedProductDto(
+			title,
 			oldPrice,
 			currentPrice,
 			imgSrc,
@@ -171,7 +176,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 	return products
 }
 
-func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
+func getProductBrand(page playwright.Page, product *dto.ScrapedProductDto) (*dto.ScrapedProductDto, error) {
 	amount, err := page.Locator(".preview-product-weight").InnerText()
 
 	if err != nil {
@@ -181,9 +186,9 @@ func getProductBrand(page playwright.Page, product *entity.ScrapedProduct) (*ent
 	}
 
 	if strings.Contains(amount, "л") {
-		utils.ScraperSetVolumeOrWeight(amount, product)
+		product.ScraperSetVolumeOrWeight(amount)
 	} else {
-		utils.ScraperSetVolumeOrWeight(amount, product)
+		product.ScraperSetVolumeOrWeight(amount)
 	}
 
 	descriptions, err := page.Locator(".product-details-column.trademark").All()

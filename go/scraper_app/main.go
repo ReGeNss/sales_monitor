@@ -6,7 +6,6 @@ import (
 	"log"
 	config "sales_monitor/internal/scheduler_config"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
-	scrapers "sales_monitor/scraper_app/feature/scraper/service/scrapers"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
 
@@ -47,16 +46,11 @@ func runConfigJob(configPath string, jobID string) error {
 		return err
 	}
 
-	scraperInstance, err := scrapers.GetScraperByShopName(job.ShopID)
-	if err != nil {
-		return err
-	}
-
-	plan := buildPlan(job, scraperInstance)
+	plan := buildPlan(job)
 	return Run(plan)
 }
 
-func buildPlan(job *config.ResolvedJob, scraperInstance scraper.Scraper) scraper.ScrapingPlan {
+func buildPlan(job *config.ResolvedJob) scraper.ScrapingPlan {
 	var differentiation *entity.ProductDifferentiationEntity
 	if len(job.Differentiation) > 0 {
 		differentiation = &entity.ProductDifferentiationEntity{
@@ -73,7 +67,7 @@ func buildPlan(job *config.ResolvedJob, scraperInstance scraper.Scraper) scraper
 				ScrapersConfigs: []scraper.ScraperConfig{
 					{
 						URLs:    job.URLs,
-						Scraper: scraperInstance,
+						ShopID:  job.ShopID,
 					},
 				},
 			},

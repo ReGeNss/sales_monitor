@@ -5,7 +5,6 @@ import (
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
-	"sales_monitor/scraper_app/shared/product/utils"
 	"strings"
 )
 
@@ -99,7 +98,7 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 						)
 					}
 
-					fingerprint := utils.NormalizeProductName(product.Name, append([]string{strings.ToLower(brandName), strings.ToLower(categoryName)}, scrapedData.WordsToIgnore...))
+					fingerprint := product.GetFingerprint([]string{categoryName})
 					attributes := []*entity.ProductAttribute{}
 
 					if product.Volume != "" {

@@ -2,23 +2,26 @@ package silpo
 
 import (
 	"fmt"
-	"github.com/playwright-community/playwright-go"
 	"log"
 	"regexp"
 	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/feature/scraper/service/dto"
 	"sales_monitor/scraper_app/feature/scraper/utils"
-	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
 	"time"
+
+	"github.com/playwright-community/playwright-go"
 )
 
-type SilpoScraper struct{}
+type SilpoScraper struct{
+	Browser playwright.Browser
+}
 
 func (s *SilpoScraper) GetMarketplaceName() string {
 	return "Сільпо"
 }
 
-func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgnore []string, cachedProducts *scraper_config.LaterScrapedProducts) *scraper_config.ScrapeResult {
+func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, cachedProducts *scraper_config.LaterScrapedProducts) *dto.ScrapeResult {
 	page, err := utils.OpenPage(browser)
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
@@ -80,10 +83,10 @@ func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgn
 		curLen = stableCount
 	}
 
-	products := getProducts(page, wordsToIgnore)
+	products := getProducts(page)
 	page.Close()
 
-	productsWithBrand := []*entity.ScrapedProduct{}
+	productsWithBrand := []*dto.ScrapedProductDto{}
 	newCount := 0
 
 	for _, product := range products {
@@ -121,7 +124,7 @@ func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, wordsToIgn
 		})()
 	}
 
-	return &scraper_config.ScrapeResult{
+	return &dto.ScrapeResult{
 		Products:   productsWithBrand,
 		FoundCount: len(products),
 		NewCount:   newCount,
@@ -156,8 +159,8 @@ func waitForStableElementCount(page playwright.Page, selector string, checkInter
 	return lastCount
 }
 
-func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.ScrapedProduct {
-	products := []*entity.ScrapedProduct{}
+func getProducts(page playwright.Page) []*dto.ScrapedProductDto {
+	products := []*dto.ScrapedProductDto{}
 
 	result, err := page.Evaluate(`
 		() => {
@@ -220,7 +223,6 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 		}
 
 		title, _ := productMap["title"].(string)
-		title = utils.ReplaceIgnoredWords(title, wordsToIgnore)
 		currentPrice, _ := productMap["currentPrice"].(string)
 		oldPrice, _ := productMap["oldPrice"].(string)
 		imgSrc, _ := productMap["imgSrc"].(string)
@@ -230,12 +232,12 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 			continue
 		}
 
-		product := entity.NewScrapedProduct(
-			strings.TrimSpace(title),
+		product := dto.CreateScrapedProductDto(
+			title,
 			oldPrice,
 			currentPrice,
 			imgSrc,
-			"https://silpo.ua"+url,
+			url,
 		)
 
 		products = append(products, product)
@@ -244,7 +246,7 @@ func getProducts(page playwright.Page, wordsToIgnore []string) []*entity.Scraped
 	return products
 }
 
-func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*entity.ScrapedProduct, error) {
+func getProductDetails(page playwright.Page, product *dto.ScrapedProductDto) (*dto.ScrapedProductDto, error) {
 	title, err := page.Locator("h1").TextContent()
 	if err != nil {
 		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_title", URL: product.URL})
@@ -260,7 +262,7 @@ func getProductDetails(page playwright.Page, product *entity.ScrapedProduct) (*e
 		return nil, err
 	}
 
-	err = utils.ScraperSetVolumeOrWeight(amount[len(amount)-1], product)
+	err = product.ScraperSetVolumeOrWeight(amount[len(amount)-1])
 	if err != nil {
 		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "silpo_volume_weight", URL: product.URL})
 		log.Printf("could not set volume or weight: %v", err)
