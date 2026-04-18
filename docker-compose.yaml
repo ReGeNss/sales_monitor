@@ -40,7 +40,7 @@ services:
   scraper_logs:
     build:
       context: .
-      dockerfile: scraper_logs/Dockerfile
+      dockerfile: go/scraper_logs/Dockerfile
     restart: unless-stopped
     ports:
       - "${SCRAPER_LOGS_PORT}:${SCRAPER_LOGS_PORT}"
@@ -97,7 +97,7 @@ services:
   scheduler:
     build:
       context: .
-      dockerfile: scheduler/dockerfile
+      dockerfile: go/scheduler/dockerfile
     restart: unless-stopped
     environment:
       SCRAPER_LOGS_DIR: /root/logs
@@ -122,7 +122,7 @@ services:
   notifications_service:
     build:
       context: .
-      dockerfile: notifications_service/dockerfile
+      dockerfile: go/notifications_service/dockerfile
     restart: unless-stopped
     environment:
       DB_HOST: ${DB_HOST}

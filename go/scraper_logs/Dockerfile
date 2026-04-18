@@ -1,8 +1,8 @@
 FROM golang:1.25.5 AS builder
 WORKDIR /app
-COPY go.mod go.sum ./
+COPY go/go.mod go/go.sum ./
 RUN go mod download
-COPY . .
+COPY go/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /scraper_logs ./scraper_logs
 
 FROM debian:bookworm-slim

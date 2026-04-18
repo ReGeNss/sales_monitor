@@ -1,9 +1,9 @@
     FROM golang:1.25.5-alpine AS builder
     WORKDIR /app
-    COPY go.mod go.sum ./
+    COPY go/go.mod go/go.sum ./
     RUN go mod download
-    COPY notifications_service ./notifications_service
-    COPY internal ./internal
+    COPY go/notifications_service ./notifications_service
+    COPY go/internal ./internal
     RUN CGO_ENABLED=0 GOOS=linux go build -o /main ./notifications_service
     
     FROM alpine:latest

@@ -30,15 +30,15 @@ jobs:
 
           SERVICES=""
 
-          if echo "$CHANGED" | grep -qE '^(scheduler/|scraper_app/|internal/|go\.(mod|sum))'; then
+          if echo "$CHANGED" | grep -qE '^go/(scheduler/|scraper_app/|internal/|go\.(mod|sum))'; then
             SERVICES="$SERVICES scheduler"
           fi
 
-          if echo "$CHANGED" | grep -qE '^(scraper_logs/|internal/|go\.(mod|sum))'; then
+          if echo "$CHANGED" | grep -qE '^go/(scraper_logs/|internal/|go\.(mod|sum))'; then
             SERVICES="$SERVICES scraper_logs"
           fi
 
-          if echo "$CHANGED" | grep -qE '^(notifications_service/|internal/|go\.(mod|sum))'; then
+          if echo "$CHANGED" | grep -qE '^go/(notifications_service/|internal/|go\.(mod|sum))'; then
             SERVICES="$SERVICES notifications_service"
           fi
 

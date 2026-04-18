@@ -1,8 +1,8 @@
 FROM golang:1.25.5 AS builder
 WORKDIR /app
-COPY go.mod go.sum ./
+COPY go/go.mod go/go.sum ./
 RUN go mod download
-COPY . .
+COPY go/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /main/scheduler ./scheduler
 RUN CGO_ENABLED=0 GOOS=linux go build -o /main/scraper_app ./scraper_app
 RUN go install github.com/playwright-community/playwright-go/cmd/playwright@v0.5200.1
