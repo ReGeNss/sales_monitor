@@ -139,8 +139,8 @@ services:
 
   api-monitor:
     build:
-      context: .
-      dockerfile: node/apps/api-monitor/Dockerfile
+      context: ./node
+      dockerfile: apps/api-monitor/Dockerfile
     restart: unless-stopped
     ports:
       - "${API_PORT}:${API_PORT}"
@@ -161,12 +161,11 @@ services:
       migrate:
         condition: service_completed_successfully
     volumes:
-      - ./package.json:/workspace/package.json
-      - ./node:/workspace/node
+      - ./node:/workspace
       - node_modules:/workspace/node_modules
-      - api_monitor_node_modules:/workspace/node/apps/api-monitor/node_modules
-      - database_node_modules:/workspace/node/packages/database/node_modules
-      - common_node_modules:/workspace/node/packages/common/node_modules
+      - api_monitor_node_modules:/workspace/apps/api-monitor/node_modules
+      - database_node_modules:/workspace/packages/database/node_modules
+      - common_node_modules:/workspace/packages/common/node_modules
     working_dir: /workspace
     command: sh -c "npm install && npm rebuild bcrypt --build-from-source && npm run build --workspace=@sales-monitor/database && npm run build --workspace=@sales-monitor/common && npm run dev --workspace=@sales-monitor/api-monitor"
 

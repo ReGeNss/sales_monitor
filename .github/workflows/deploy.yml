@@ -42,7 +42,7 @@ jobs:
             SERVICES="$SERVICES notifications_service"
           fi
 
-          if echo "$CHANGED" | grep -qE '^(node/|package\.json|package-lock\.json)'; then
+          if echo "$CHANGED" | grep -qE '^node/'; then
             SERVICES="$SERVICES api-monitor"
           fi
 
