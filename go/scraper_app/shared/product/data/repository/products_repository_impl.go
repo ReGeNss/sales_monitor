@@ -9,9 +9,7 @@ import (
 	"sales_monitor/scraper_app/shared/product/data/mapper"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
-	"sales_monitor/scraper_app/shared/product/utils"
 
-	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -186,9 +184,7 @@ func (p *productRepositoryImpl) CreateProduct(product *entity.Product, attribute
 	return uint(productModel.ProductID), err
 }
 
-func (p *productRepositoryImpl) GetMostSimilarProduct(fingerprint *string, attributes []*entity.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (*entity.Product, error) {
-	var products []models.Product
-
+func (p *productRepositoryImpl) FindSimilarCandidates(fingerprint *string, attributes []*entity.ProductAttribute, brandID int, categoryID int) ([]*entity.Product, error) {
 	query := p.db.Model(&models.Product{}).Table("products as p").
 		Select("p.product_id, p.name_fingerprint").
 		Where("category_id = ? AND brand_id = ?", categoryID, brandID)
@@ -198,38 +194,26 @@ func (p *productRepositoryImpl) GetMostSimilarProduct(fingerprint *string, attri
 	if fingerprint == nil {
 		var product models.Product
 		err := query.Where("p.name_fingerprint IS NULL").First(&product).Error
-
 		if err != nil {
 			return nil, err
 		}
-		return mapper.ProductToEntity(&product), nil
+		return []*entity.Product{mapper.ProductToEntity(&product)}, nil
 	}
 
+	var products []models.Product
 	err := query.Where("MATCH(p.name_fingerprint) AGAINST(? IN NATURAL LANGUAGE MODE) > 0", *fingerprint).
 		Order(fmt.Sprintf("MATCH(p.name_fingerprint) AGAINST('%s' IN NATURAL LANGUAGE MODE) DESC", *fingerprint)).
 		Limit(4).
 		Find(&products).Error
-
 	if err != nil {
 		return nil, err
 	}
 
-	bestSimilarity := 0
-	var bestProduct models.Product
-
-	for _, product := range products {
-		similarity := fuzzy.TokenSortRatio(*fingerprint, *product.NameFingerprint)
-		if similarity > bestSimilarity {
-			bestSimilarity = similarity
-			bestProduct = product
-		}
+	candidates := make([]*entity.Product, 0, len(products))
+	for i := range products {
+		candidates = append(candidates, mapper.ProductToEntity(&products[i]))
 	}
-
-	if bestSimilarity >= 91 && utils.ProductDifferentiator(*fingerprint, *bestProduct.NameFingerprint, productDifferentiationEntity) {
-		return mapper.ProductToEntity(&bestProduct), nil
-	}
-
-	return nil, fmt.Errorf("no similar product found")
+	return candidates, nil
 }
 
 func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint *string, brandID int, categoryID int, attributes []*entity.ProductAttribute) (*entity.Product, error) {

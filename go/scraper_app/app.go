@@ -9,6 +9,7 @@ import (
 	cached_scraped_product_service "sales_monitor/scraper_app/feature/scraper/service"
 	scraper_service "sales_monitor/scraper_app/feature/scraper/service"
 	"sales_monitor/scraper_app/shared/product/data/repository"
+	domainservice "sales_monitor/scraper_app/shared/product/domain/service"
 	"sales_monitor/scraper_app/shared/product/service"
 )
 
@@ -21,6 +22,7 @@ func Run(plan scraper.ScrapingPlan) error {
 
 	productService := service.NewProductService(
 		repository.NewProductRepository(db.GetDB(), db.GetRedis()),
+		domainservice.NewProductMatcher(),
 	)
 
 	scraperService := scraper_service.NewScraperService(

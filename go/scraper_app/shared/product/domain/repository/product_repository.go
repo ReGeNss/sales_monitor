@@ -6,7 +6,7 @@ import (
 
 type ProductRepository interface {
 	GetProductByFingerprint(fingerprint *string, brandID int, categoryID int, attributes []*entity.ProductAttribute) (*entity.Product, error)
-	GetMostSimilarProduct(fingerprint *string, attributes []*entity.ProductAttribute, productDifferentiationEntity *entity.ProductDifferentiationEntity, brandID int, categoryID int, currentMarketplaceID int) (*entity.Product, error)
+	FindSimilarCandidates(fingerprint *string, attributes []*entity.ProductAttribute, brandID int, categoryID int) ([]*entity.Product, error)
 	CreateProduct(product *entity.Product, attributes []*entity.ProductAttribute) (uint, error)
 	AddPriceToMarketplaceProduct(productID int, marketplaceID int, url string, regularPrice float64, specialPrice *float64) error
 	AddPriceToMarketplaceProductID(marketplaceProductID int, regularPrice float64, specialPrice *float64) error

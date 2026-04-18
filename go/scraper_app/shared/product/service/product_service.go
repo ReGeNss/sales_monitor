@@ -5,6 +5,7 @@ import (
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
+	domainservice "sales_monitor/scraper_app/shared/product/domain/service"
 	"strings"
 )
 
@@ -14,11 +15,16 @@ type ProductService interface {
 
 type productServiceImpl struct {
 	productRepository repository.ProductRepository
+	productMatcher    domainservice.ProductMatcher
 }
 
-func NewProductService(productRepository repository.ProductRepository) ProductService {
+func NewProductService(
+	productRepository repository.ProductRepository,
+	productMatcher domainservice.ProductMatcher,
+) ProductService {
 	return &productServiceImpl{
 		productRepository: productRepository,
+		productMatcher:    productMatcher,
 	}
 }
 
@@ -120,9 +126,17 @@ func (s *productServiceImpl) ProcessProducts(scrapedData map[string]*scraper.Scr
 					existingProduct, err := s.productRepository.GetProductByFingerprint(fingerprint, brandID, categoryID, attributes)
 
 					if err != nil {
-						matchedProduct, err := s.productRepository.GetMostSimilarProduct(fingerprint, attributes, scrapedData.ProductDifferentiationEntity, brandID, categoryID, marketplaceID)
-						if err != nil {
+						var matchedProduct *entity.Product
+						candidates, candErr := s.productRepository.FindSimilarCandidates(fingerprint, attributes, brandID, categoryID)
+						if candErr == nil && fingerprint != nil {
+							if m, ok := s.productMatcher.PickBestMatch(*fingerprint, candidates, scrapedData.ProductDifferentiationEntity); ok {
+								matchedProduct = m
+							}
+						} else if candErr == nil && fingerprint == nil && len(candidates) > 0 {
+							matchedProduct = candidates[0]
+						}
 
+						if matchedProduct == nil {
 							id, err := s.productRepository.CreateProduct(&entity.Product{
 								Name:            product.Name,
 								NameFingerprint: fingerprint,

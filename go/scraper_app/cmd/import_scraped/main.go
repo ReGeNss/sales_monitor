@@ -11,6 +11,7 @@ import (
 	"sales_monitor/internal/db"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/data/repository"
+	domainservice "sales_monitor/scraper_app/shared/product/domain/service"
 	"sales_monitor/scraper_app/shared/product/service"
 )
 
@@ -28,6 +29,7 @@ func main() {
 
 	productService := service.NewProductService(
 		repository.NewProductRepository(db.GetDB(), db.GetRedis()),
+		domainservice.NewProductMatcher(),
 	)
 
 	productService.ProcessProducts(scrapedData)
