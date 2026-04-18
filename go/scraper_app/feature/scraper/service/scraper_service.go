@@ -1,17 +1,12 @@
 package service
 
 import (
-	"fmt"
 	"log"
-	"os"
 	config "sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 	"sales_monitor/scraper_app/feature/scraper/service/scrapers"
-	"sales_monitor/scraper_app/metrics"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
-	"sales_monitor/scraper_app/utils"
-	"strings"
-	"time"
 
 	"github.com/playwright-community/playwright-go"
 )
@@ -24,17 +19,23 @@ type scraperServiceImpl struct {
 	configuration               config.ScrapingPlan
 	productService              service.ProductService
 	cachedScrapedProductService CachedScrapedProductService
+	resultStorage               gateway.ResultStorage
+	metricsPublisher            gateway.MetricsPublisher
 }
 
 func NewScraperService(
 	configuration config.ScrapingPlan,
 	productService service.ProductService,
 	cachedScrapedProductService CachedScrapedProductService,
+	resultStorage gateway.ResultStorage,
+	metricsPublisher gateway.MetricsPublisher,
 ) ScraperService {
 	return &scraperServiceImpl{
 		configuration:               configuration,
 		productService:              productService,
 		cachedScrapedProductService: cachedScrapedProductService,
+		resultStorage:               resultStorage,
+		metricsPublisher:            metricsPublisher,
 	}
 }
 
@@ -126,10 +127,6 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 				totalScraped += len(validProducts)
 				totalNew += result.NewCount
 				totalOnSale += onSale
-
-				log.Printf("[%s] found: %d, scraped: %d, new: %d, on sale: %d",
-					scraper.GetMarketplaceName(),
-					result.FoundCount, len(validProducts), result.NewCount, onSale)
 			}
 		}
 	}
@@ -141,35 +138,14 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 		scrapedCategories = append(scrapedCategories, category.Category)
 	}
 
-	utils.SaveToJsonFile(
-		&scrapedProducts,
-		fmt.Sprintf("%s/scraped_%s_%s.json",
-			os.Getenv("SCRAPED_DATA_FOLDER"),
-			strings.Join(scrapedCategories, " "),
-			time.Now().Format(time.DateTime)),
-	)
+	s.resultStorage.Save(scrapedProducts, scrapedCategories)
 
-	log.Printf("=== Scraping summary: found: %d, scraped: %d, new: %d, on sale: %d ===",
-		totalFound, totalScraped, totalNew, totalOnSale)
-
-	scrapingMetrics := metrics.ScrapingMetrics{
+	s.metricsPublisher.Publish(gateway.ScrapingMetrics{
 		Found:   totalFound,
 		Scraped: totalScraped,
 		New:     totalNew,
 		OnSale:  totalOnSale,
-	}
-
-	if sample := extractSampleProduct(scrapedProducts); sample != nil {
-		scrapingMetrics.SampleProductName = sample.Name
-		scrapingMetrics.SampleCategory = sample.Category
-		scrapingMetrics.SampleMarketplace = sample.Marketplace
-		if sample.SpecialPrice > 0 {
-			scrapingMetrics.SampleProductPrice = sample.SpecialPrice
-		} else {
-			scrapingMetrics.SampleProductPrice = sample.RegularPrice
-		}
-	}
-	metrics.PushToPrometheus(scrapingMetrics)
+	}, scrapedProducts)
 
 	return scrapedProducts, nil
 }
@@ -182,36 +158,4 @@ func countProductsOnSale(products []*entity.ScrapedProduct) int {
 		}
 	}
 	return count
-}
-
-type sampleProduct struct {
-	Name         string
-	RegularPrice float64
-	SpecialPrice float64
-	Category     string
-	Marketplace  string
-}
-
-func extractSampleProduct(scrapedProducts map[string]*config.ScrapingResult) *sampleProduct {
-	for category, result := range scrapedProducts {
-		if result == nil || len(result.ScrapedProducts) == 0 {
-			continue
-		}
-		for _, sp := range result.ScrapedProducts {
-			if sp == nil || len(sp.Products) == 0 {
-				continue
-			}
-			p := sp.Products[0]
-			if p != nil && p.Name != "" {
-				return &sampleProduct{
-					Name:         p.Name,
-					RegularPrice: p.RegularPrice,
-					SpecialPrice: p.SpecialPrice,
-					Category:     category,
-					Marketplace:  sp.MarketplaceName,
-				}
-			}
-		}
-	}
-	return nil
 }

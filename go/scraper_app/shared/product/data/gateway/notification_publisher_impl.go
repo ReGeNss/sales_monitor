@@ -1,4 +1,4 @@
-package repository
+package gateway
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"sales_monitor/scraper_app/core/env"
 	"sales_monitor/scraper_app/shared/product/data/mapper"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
-	"sales_monitor/scraper_app/shared/product/domain/repository"
+	domaingateway "sales_monitor/scraper_app/shared/product/domain/gateway"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -16,7 +16,7 @@ type notificationPublisherImpl struct {
 	redisClient *redis.Client
 }
 
-func NewNotificationPublisher(redisClient *redis.Client) repository.NotificationPublisher {
+func NewNotificationPublisher(redisClient *redis.Client) domaingateway.NotificationPublisher {
 	return &notificationPublisherImpl{redisClient: redisClient}
 }
 

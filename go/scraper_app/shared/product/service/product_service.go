@@ -4,6 +4,7 @@ import (
 	"log"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/gateway"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	domainservice "sales_monitor/scraper_app/shared/product/domain/service"
 	"strings"
@@ -19,7 +20,7 @@ type productServiceImpl struct {
 	brandRepository       repository.BrandRepository
 	marketplaceRepository repository.MarketplaceRepository
 	priceRepository       repository.PriceRepository
-	notificationPublisher repository.NotificationPublisher
+	notificationPublisher gateway.NotificationPublisher
 	productMatcher        domainservice.ProductMatcher
 }
 
@@ -29,7 +30,7 @@ func NewProductService(
 	brandRepository repository.BrandRepository,
 	marketplaceRepository repository.MarketplaceRepository,
 	priceRepository repository.PriceRepository,
-	notificationPublisher repository.NotificationPublisher,
+	notificationPublisher gateway.NotificationPublisher,
 	productMatcher domainservice.ProductMatcher,
 ) ProductService {
 	return &productServiceImpl{

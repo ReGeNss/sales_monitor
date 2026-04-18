@@ -2,12 +2,16 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"sales_monitor/internal/db"
-  	cached_scraped_product_repository "sales_monitor/scraper_app/feature/scraper/data/repository"
+	scraper_metrics "sales_monitor/scraper_app/feature/scraper/data/metrics"
+	cached_scraped_product_repository "sales_monitor/scraper_app/feature/scraper/data/repository"
+	scraper_storage "sales_monitor/scraper_app/feature/scraper/data/storage"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	cached_scraped_product_service "sales_monitor/scraper_app/feature/scraper/service"
 	scraper_service "sales_monitor/scraper_app/feature/scraper/service"
+	product_gateway "sales_monitor/scraper_app/shared/product/data/gateway"
 	"sales_monitor/scraper_app/shared/product/data/repository"
 	domainservice "sales_monitor/scraper_app/shared/product/domain/service"
 	"sales_monitor/scraper_app/shared/product/service"
@@ -27,7 +31,7 @@ func Run(plan scraper.ScrapingPlan) error {
 		repository.NewBrandRepository(gormDB),
 		repository.NewMarketplaceRepository(gormDB),
 		repository.NewPriceRepository(gormDB),
-		repository.NewNotificationPublisher(db.GetRedis()),
+		product_gateway.NewNotificationPublisher(db.GetRedis()),
 		domainservice.NewProductMatcher(),
 	)
 
@@ -35,6 +39,8 @@ func Run(plan scraper.ScrapingPlan) error {
 		plan,
 		productService,
 		cachedScrapedProductService,
+		scraper_storage.NewFileResultStorage(os.Getenv("SCRAPED_DATA_FOLDER")),
+		scraper_metrics.NewPrometheusPublisher(),
 	)
 
 	scrapedProducts, err := scraperService.Scrape()

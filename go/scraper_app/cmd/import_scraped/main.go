@@ -10,6 +10,7 @@ import (
 
 	"sales_monitor/internal/db"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
+	product_gateway "sales_monitor/scraper_app/shared/product/data/gateway"
 	"sales_monitor/scraper_app/shared/product/data/repository"
 	domainservice "sales_monitor/scraper_app/shared/product/domain/service"
 	"sales_monitor/scraper_app/shared/product/service"
@@ -34,7 +35,7 @@ func main() {
 		repository.NewBrandRepository(gormDB),
 		repository.NewMarketplaceRepository(gormDB),
 		repository.NewPriceRepository(gormDB),
-		repository.NewNotificationPublisher(db.GetRedis()),
+		product_gateway.NewNotificationPublisher(db.GetRedis()),
 		domainservice.NewProductMatcher(),
 	)
 
