@@ -1,9 +1,11 @@
 package service
 
 import (
+	"fmt"
 	"log"
 	config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
+	"sales_monitor/scraper_app/feature/scraper/service/dto"
 	"sales_monitor/scraper_app/feature/scraper/service/scrapers"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
@@ -39,115 +41,172 @@ func NewScraperService(
 	}
 }
 
+type scrapeTotals struct {
+	found, scraped, new, onSale int
+}
+
+func (t *scrapeTotals) add(other scrapeTotals) {
+	t.found += other.found
+	t.scraped += other.scraped
+	t.new += other.new
+	t.onSale += other.onSale
+}
+
 func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error) {
+	browser, closeBrowser, err := launchBrowser()
+	if err != nil {
+		return nil, err
+	}
+	defer closeBrowser()
+
 	scrapedProducts := map[string]*config.ScrapingResult{}
-	var totalFound, totalScraped, totalNew, totalOnSale int
+	var totals scrapeTotals
 
-	pw, err := playwright.Run()
-	if err != nil {
-		log.Fatalf("could not start playwright: %v", err)
-	}
-	browser, err := pw.Chromium.Launch(
-		playwright.BrowserTypeLaunchOptions{
-			Headless: playwright.Bool(true),
-			Args: []string{
-				"--disable-blink-features=AutomationControlled",
-				"--disable-dev-shm-usage",
-			},
-		},
-	)
-
-	if err != nil {
-		log.Fatalf("could not launch browser: %v", err)
-	}
-
-	for _, scrapingCategory := range s.configuration.Categories {
-		for _, scraperConfig := range scrapingCategory.ScrapersConfigs {
-			for _, url := range scraperConfig.URLs {
-				scraper, err := scrapers.GetScraperByShopName(scraperConfig.ShopID, browser)
-				if err != nil {
-					log.Fatalf("could not get scraper for shop %s: %v", scraperConfig.ShopID, err)
-				}
-
-				cachedProducts, err := s.cachedScrapedProductService.GetCachedScrapedProducts(scraper.GetMarketplaceName(), scrapingCategory.Category)
-				if err != nil {
-					log.Printf("error getting cached scraped products: %v", err)
-					cachedProducts = nil
-				}
-
-				result := scraper.Scrape(
-					browser,
-					url,
-					cachedProducts,
-				)
-
-				products := []*entity.ScrapedProduct{}
-
-				for _, p := range result.Products {
-					product, _ := entity.NewScrapedProduct(
-						p.Name,
-						p.RegularPrice,
-						p.SpecialPrice,
-						p.ImageURL,
-						p.URL,
-						p.BrandName,
-						p.Volume,
-						p.Weight,
-						scrapingCategory.WordsToIgnore,
-					)
-					if product != nil {
-						products = append(products, product)
-					}
-				}
-
-				if scrapedProducts[scrapingCategory.Category] == nil {
-					scrapedProducts[scrapingCategory.Category] = &config.ScrapingResult{
-						ScrapedProducts: []*entity.ScrapedProducts{{
-							Products:        products,
-							MarketplaceName: scraper.GetMarketplaceName(),
-						}},
-						ProductDifferentiationEntity: scrapingCategory.ProductDifferentiationEntity,
-					}
-				} else {
-					scrapedProducts[scrapingCategory.Category].ScrapedProducts = append(scrapedProducts[scrapingCategory.Category].ScrapedProducts, &entity.ScrapedProducts{
-						Products:        products,
-						MarketplaceName: scraper.GetMarketplaceName(),
-					})
-				}
-
-				validProducts := []*entity.ScrapedProduct{}
-				for _, p := range products {
-					if p != nil {
-						validProducts = append(validProducts, p)
-					}
-				}
-
-				onSale := countProductsOnSale(validProducts)
-				totalFound += result.FoundCount
-				totalScraped += len(validProducts)
-				totalNew += result.NewCount
-				totalOnSale += onSale
-			}
-		}
-	}
-
-	pw.Stop()
-
-	scrapedCategories := []string{}
 	for _, category := range s.configuration.Categories {
-		scrapedCategories = append(scrapedCategories, category.Category)
+		categoryTotals, err := s.scrapeCategory(browser, category, scrapedProducts)
+		if err != nil {
+			return nil, err
+		}
+		totals.add(categoryTotals)
 	}
 
-	s.resultStorage.Save(scrapedProducts, scrapedCategories)
+	s.resultStorage.Save(scrapedProducts, s.categoryNames())
 
 	s.metricsPublisher.Publish(gateway.ScrapingMetrics{
-		Found:   totalFound,
-		Scraped: totalScraped,
-		New:     totalNew,
-		OnSale:  totalOnSale,
+		Found:   totals.found,
+		Scraped: totals.scraped,
+		New:     totals.new,
+		OnSale:  totals.onSale,
 	}, scrapedProducts)
 
 	return scrapedProducts, nil
+}
+
+func launchBrowser() (playwright.Browser, func(), error) {
+	pw, err := playwright.Run()
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not start playwright: %w", err)
+	}
+
+	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
+		Headless: playwright.Bool(true),
+		Args: []string{
+			"--disable-blink-features=AutomationControlled",
+			"--disable-dev-shm-usage",
+		},
+	})
+	if err != nil {
+		pw.Stop()
+		return nil, nil, fmt.Errorf("could not launch browser: %w", err)
+	}
+
+	cleanup := func() {
+		if err := browser.Close(); err != nil {
+			log.Printf("could not close browser: %v", err)
+		}
+		if err := pw.Stop(); err != nil {
+			log.Printf("could not stop playwright: %v", err)
+		}
+	}
+	return browser, cleanup, nil
+}
+
+func (s *scraperServiceImpl) scrapeCategory(
+	browser playwright.Browser,
+	category config.ScrapingCategory,
+	out map[string]*config.ScrapingResult,
+) (scrapeTotals, error) {
+	var totals scrapeTotals
+
+	for _, scraperConfig := range category.ScrapersConfigs {
+		for _, url := range scraperConfig.URLs {
+			scraper, err := scrapers.GetScraperByShopName(scraperConfig.ShopID, browser)
+			if err != nil {
+				return totals, fmt.Errorf("get scraper for shop %s: %w", scraperConfig.ShopID, err)
+			}
+
+			group, urlTotals := s.scrapeURL(browser, scraper, url, category)
+			appendScrapedProducts(out, category, group)
+			totals.add(urlTotals)
+		}
+	}
+	return totals, nil
+}
+
+func (s *scraperServiceImpl) scrapeURL(
+	browser playwright.Browser,
+	scraper scrapers.Scraper,
+	url string,
+	category config.ScrapingCategory,
+) (*entity.ScrapedProducts, scrapeTotals) {
+	marketplaceName := scraper.GetMarketplaceName()
+
+	cachedProducts, err := s.cachedScrapedProductService.GetCachedScrapedProducts(marketplaceName, category.Category)
+	if err != nil {
+		log.Printf("error getting cached scraped products: %v", err)
+		cachedProducts = nil
+	}
+
+	result := scraper.Scrape(browser, url, cachedProducts)
+	products := buildScrapedProducts(result.Products, category.WordsToIgnore)
+
+	group := &entity.ScrapedProducts{
+		Products:        products,
+		MarketplaceName: marketplaceName,
+	}
+
+	totals := scrapeTotals{
+		found:   result.FoundCount,
+		scraped: len(products),
+		new:     result.NewCount,
+		onSale:  countProductsOnSale(products),
+	}
+	return group, totals
+}
+
+func buildScrapedProducts(raw []*dto.ScrapedProductDto, wordsToIgnore []string) []*entity.ScrapedProduct {
+	products := make([]*entity.ScrapedProduct, 0, len(raw))
+	for _, p := range raw {
+		product, _ := entity.NewScrapedProduct(
+			p.Name,
+			p.RegularPrice,
+			p.SpecialPrice,
+			p.ImageURL,
+			p.URL,
+			p.BrandName,
+			p.Volume,
+			p.Weight,
+			wordsToIgnore,
+		)
+		if product != nil {
+			products = append(products, product)
+		}
+	}
+	return products
+}
+
+func appendScrapedProducts(
+	out map[string]*config.ScrapingResult,
+	category config.ScrapingCategory,
+	group *entity.ScrapedProducts,
+) {
+	existing, ok := out[category.Category]
+	if !ok {
+		out[category.Category] = &config.ScrapingResult{
+			ScrapedProducts:              []*entity.ScrapedProducts{group},
+			ProductDifferentiationEntity: category.ProductDifferentiationEntity,
+		}
+		return
+	}
+	existing.ScrapedProducts = append(existing.ScrapedProducts, group)
+}
+
+func (s *scraperServiceImpl) categoryNames() []string {
+	names := make([]string, 0, len(s.configuration.Categories))
+	for _, c := range s.configuration.Categories {
+		names = append(names, c.Category)
+	}
+	return names
 }
 
 func countProductsOnSale(products []*entity.ScrapedProduct) int {

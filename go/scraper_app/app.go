@@ -9,7 +9,6 @@ import (
 	cached_scraped_product_repository "sales_monitor/scraper_app/feature/scraper/data/repository"
 	scraper_storage "sales_monitor/scraper_app/feature/scraper/data/storage"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
-	cached_scraped_product_service "sales_monitor/scraper_app/feature/scraper/service"
 	scraper_service "sales_monitor/scraper_app/feature/scraper/service"
 	product_gateway "sales_monitor/scraper_app/shared/product/data/gateway"
 	"sales_monitor/scraper_app/shared/product/data/repository"
@@ -21,7 +20,7 @@ import (
 func Run(plan scraper.ScrapingPlan) error {
 	db.ConnectToDB()
 
-	cachedScrapedProductService := cached_scraped_product_service.NewCachedScrapedProductService(
+	cachedScrapedProductService := scraper_service.NewCachedScrapedProductService(
 		cached_scraped_product_repository.NewCachedScrapedProductsRepository(db.GetDB()),
 	)
 
