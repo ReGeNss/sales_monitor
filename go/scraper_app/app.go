@@ -15,6 +15,7 @@ import (
 	"sales_monitor/scraper_app/shared/product/data/repository"
 	domainservice "sales_monitor/scraper_app/shared/product/domain/service"
 	"sales_monitor/scraper_app/shared/product/service"
+	"sales_monitor/scraper_app/shared/product/service/usecase"
 )
 
 func Run(plan scraper.ScrapingPlan) error {
@@ -25,14 +26,22 @@ func Run(plan scraper.ScrapingPlan) error {
 	)
 
 	gormDB := db.GetDB()
+	productRepo := repository.NewProductRepository(gormDB)
+	categoryRepo := repository.NewCategoryRepository(gormDB)
+	brandRepo := repository.NewBrandRepository(gormDB)
+	marketplaceRepo := repository.NewMarketplaceRepository(gormDB)
+	priceRepo := repository.NewPriceRepository(gormDB)
+	matcher := domainservice.NewProductMatcher()
+
 	productService := service.NewProductService(
-		repository.NewProductRepository(gormDB),
-		repository.NewCategoryRepository(gormDB),
-		repository.NewBrandRepository(gormDB),
-		repository.NewMarketplaceRepository(gormDB),
-		repository.NewPriceRepository(gormDB),
+		usecase.NewResolveCategoryUseCase(categoryRepo),
+		usecase.NewResolveMarketplaceUseCase(marketplaceRepo),
+		usecase.NewAssignBrandsUseCase(brandRepo),
+		usecase.NewResolveBrandUseCase(brandRepo),
+		usecase.NewResolveProductUseCase(productRepo, matcher),
+		usecase.NewRecordPriceUseCase(marketplaceRepo, priceRepo),
+		marketplaceRepo,
 		product_gateway.NewNotificationPublisher(db.GetRedis()),
-		domainservice.NewProductMatcher(),
 	)
 
 	scraperService := scraper_service.NewScraperService(
