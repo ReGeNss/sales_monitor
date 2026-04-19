@@ -3,7 +3,6 @@ package metrics
 import (
 	"sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
-	appmetrics "sales_monitor/scraper_app/metrics"
 )
 
 type prometheusPublisher struct{}
@@ -13,7 +12,7 @@ func NewPrometheusPublisher() gateway.MetricsPublisher {
 }
 
 func (p *prometheusPublisher) Publish(m gateway.ScrapingMetrics, results map[string]*entity.ScrapingResult) {
-	out := appmetrics.ScrapingMetrics{
+	out := ScrapingMetrics{
 		Found:   m.Found,
 		Scraped: m.Scraped,
 		New:     m.New,
@@ -27,7 +26,7 @@ func (p *prometheusPublisher) Publish(m gateway.ScrapingMetrics, results map[str
 		out.SampleMarketplace = marketplace
 	}
 
-	appmetrics.PushToPrometheus(out)
+	PushToPrometheus(out)
 }
 
 func extractSample(results map[string]*entity.ScrapingResult) (name string, price float64, category, marketplace string, ok bool) {

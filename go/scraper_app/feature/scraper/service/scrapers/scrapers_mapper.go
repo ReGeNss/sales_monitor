@@ -3,6 +3,7 @@ package scrapers
 import (
 	"fmt"
 
+	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 	"sales_monitor/scraper_app/feature/scraper/service/scrapers/atb"
 	"sales_monitor/scraper_app/feature/scraper/service/scrapers/fora"
 	"sales_monitor/scraper_app/feature/scraper/service/scrapers/silpo"
@@ -11,19 +12,19 @@ import (
 )
 
 const (
-	ATB  = "atb"
-	FORA = "fora"
+	ATB   = "atb"
+	FORA  = "fora"
 	SILPO = "silpo"
 )
 
-func GetScraperByShopName(shopID string, browser playwright.Browser) (Scraper, error) {
+func GetScraperByShopName(shopID string, browser playwright.Browser, errorLogger gateway.ErrorLogger) (Scraper, error) {
 	switch shopID {
 	case ATB:
-		return &atb.AtbScraper{Browser: browser}, nil
+		return &atb.AtbScraper{Browser: browser, ErrorLogger: errorLogger}, nil
 	case FORA:
-		return &fora.ForaScraper{Browser: browser}, nil
+		return &fora.ForaScraper{Browser: browser, ErrorLogger: errorLogger}, nil
 	case SILPO:
-		return &silpo.SilpoScraper{Browser: browser}, nil
+		return &silpo.SilpoScraper{Browser: browser, ErrorLogger: errorLogger}, nil
 	default:
 		return nil, fmt.Errorf("unknown shop_id %q", shopID)
 	}

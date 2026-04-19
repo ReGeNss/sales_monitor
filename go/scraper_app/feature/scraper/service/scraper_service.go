@@ -23,6 +23,7 @@ type scraperServiceImpl struct {
 	cachedScrapedProductService CachedScrapedProductService
 	resultStorage               gateway.ResultStorage
 	metricsPublisher            gateway.MetricsPublisher
+	errorLogger                 gateway.ErrorLogger
 }
 
 func NewScraperService(
@@ -31,6 +32,7 @@ func NewScraperService(
 	cachedScrapedProductService CachedScrapedProductService,
 	resultStorage gateway.ResultStorage,
 	metricsPublisher gateway.MetricsPublisher,
+	errorLogger gateway.ErrorLogger,
 ) ScraperService {
 	return &scraperServiceImpl{
 		configuration:               configuration,
@@ -38,6 +40,7 @@ func NewScraperService(
 		cachedScrapedProductService: cachedScrapedProductService,
 		resultStorage:               resultStorage,
 		metricsPublisher:            metricsPublisher,
+		errorLogger:                 errorLogger,
 	}
 }
 
@@ -120,7 +123,7 @@ func (s *scraperServiceImpl) scrapeCategory(
 
 	for _, scraperConfig := range category.ScrapersConfigs {
 		for _, url := range scraperConfig.URLs {
-			scraper, err := scrapers.GetScraperByShopName(scraperConfig.ShopID, browser)
+			scraper, err := scrapers.GetScraperByShopName(scraperConfig.ShopID, browser, s.errorLogger)
 			if err != nil {
 				return totals, fmt.Errorf("get scraper for shop %s: %w", scraperConfig.ShopID, err)
 			}

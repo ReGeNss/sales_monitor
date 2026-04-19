@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"sales_monitor/internal/db"
+	scraper_logging "sales_monitor/scraper_app/feature/scraper/data/logging"
 	scraper_metrics "sales_monitor/scraper_app/feature/scraper/data/metrics"
 	cached_scraped_product_repository "sales_monitor/scraper_app/feature/scraper/data/repository"
 	scraper_storage "sales_monitor/scraper_app/feature/scraper/data/storage"
@@ -49,6 +50,7 @@ func Run(plan scraper.ScrapingPlan) error {
 		cachedScrapedProductService,
 		scraper_storage.NewFileResultStorage(os.Getenv("SCRAPED_DATA_FOLDER")),
 		scraper_metrics.NewPrometheusPublisher(),
+		scraper_logging.NewScreenshotErrorLogger(),
 	)
 
 	scrapedProducts, err := scraperService.Scrape()

@@ -3,6 +3,7 @@ package fora
 import (
 	"log"
 	scraper_config "sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 	"sales_monitor/scraper_app/feature/scraper/service/dto"
 	"sales_monitor/scraper_app/feature/scraper/utils"
 	"strings"
@@ -11,11 +12,12 @@ import (
 )
 
 type ForaScraper struct {
-	Browser playwright.Browser
+	Browser     playwright.Browser
+	ErrorLogger gateway.ErrorLogger
 }
 
-func NewForaScraper(browser playwright.Browser) *ForaScraper {
-	return &ForaScraper{Browser: browser}
+func NewForaScraper(browser playwright.Browser, errorLogger gateway.ErrorLogger) *ForaScraper {
+	return &ForaScraper{Browser: browser, ErrorLogger: errorLogger}
 }
 
 func (s *ForaScraper) GetMarketplaceName() string {
@@ -45,9 +47,9 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, cachedProdu
 		}
 	}
 
-	products := getProducts(page)
+	products := s.getProducts(page)
 	page.Close()
-	
+
 	productsWithBrand := []*dto.ScrapedProductDto{}
 	newCount := 0
 	for _, product := range products {
@@ -73,9 +75,9 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, cachedProdu
 			defer page.Close()
 			page.WaitForLoadState()
 
-			product, err = getProductBrand(page, product)
+			product, err = s.getProductBrand(page, product)
 			if err != nil {
-				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_product_brand", URL: productURL})
+				s.logErr(page, err, gateway.ErrorContext{Context: "fora_product_brand", URL: productURL})
 				log.Printf("could not get product brand: %v", err)
 				return
 			}
@@ -93,12 +95,12 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, cachedProdu
 	}
 }
 
-func getProducts(page playwright.Page) []*dto.ScrapedProductDto {
+func (s *ForaScraper) getProducts(page playwright.Page) []*dto.ScrapedProductDto {
 	products := []*dto.ScrapedProductDto{}
 
 	items, err := page.Locator(".product-list-item").All()
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_product_items"})
+		s.logErr(page, err, gateway.ErrorContext{Context: "fora_product_items"})
 		log.Printf("could not get product items: %v", err)
 		return products
 	}
@@ -112,14 +114,14 @@ func getProducts(page playwright.Page) []*dto.ScrapedProductDto {
 
 		productLink, err := item.Locator(".image-content-wrapper").GetAttribute("href")
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_product_link", Index: index, URL: productLink})
+			s.logErr(page, err, gateway.ErrorContext{Context: "fora_product_link", Index: index, URL: productLink})
 			log.Printf("could not get product link: %v", err)
 		}
 
 		currentPriceIntElement := pricesBloc.Locator(".current-integer")
 		currentPriceInt, err := currentPriceIntElement.InnerText()
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_current_price", Index: index, URL: productLink})
+			s.logErr(page, err, gateway.ErrorContext{Context: "fora_current_price", Index: index, URL: productLink})
 			log.Printf("could not get current price integer: %v", err)
 			continue
 		}
@@ -149,7 +151,7 @@ func getProducts(page playwright.Page) []*dto.ScrapedProductDto {
 		}
 		title, err := titleElement.InnerText()
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_title", Index: index, URL: productLink})
+			s.logErr(page, err, gateway.ErrorContext{Context: "fora_title", Index: index, URL: productLink})
 			log.Printf("could not get title, skipping item: %v", err)
 			continue
 		}
@@ -157,7 +159,7 @@ func getProducts(page playwright.Page) []*dto.ScrapedProductDto {
 		imgElement := item.Locator(".product-list-item__image")
 		imgSrc, err := imgElement.GetAttribute("src")
 		if err != nil {
-			utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_image_src", Index: index, URL: productLink})
+			s.logErr(page, err, gateway.ErrorContext{Context: "fora_image_src", Index: index, URL: productLink})
 			log.Printf("could not get image src: %v", err)
 			imgSrc = ""
 		}
@@ -176,11 +178,11 @@ func getProducts(page playwright.Page) []*dto.ScrapedProductDto {
 	return products
 }
 
-func getProductBrand(page playwright.Page, product *dto.ScrapedProductDto) (*dto.ScrapedProductDto, error) {
+func (s *ForaScraper) getProductBrand(page playwright.Page, product *dto.ScrapedProductDto) (*dto.ScrapedProductDto, error) {
 	amount, err := page.Locator(".preview-product-weight").InnerText()
 
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_amount", URL: product.URL})
+		s.logErr(page, err, gateway.ErrorContext{Context: "fora_amount", URL: product.URL})
 		log.Printf("could not get amount: %v", err)
 		return nil, err
 	}
@@ -192,9 +194,9 @@ func getProductBrand(page playwright.Page, product *dto.ScrapedProductDto) (*dto
 	}
 
 	descriptions, err := page.Locator(".product-details-column.trademark").All()
-	
+
 	if err != nil {
-		utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_descriptions", URL: product.URL})
+		s.logErr(page, err, gateway.ErrorContext{Context: "fora_descriptions", URL: product.URL})
 		log.Printf("could not get descriptions: %v", err)
 		return nil, err
 	}
@@ -208,7 +210,7 @@ func getProductBrand(page playwright.Page, product *dto.ScrapedProductDto) (*dto
 		if strings.TrimSpace(descriptionLabel) == "Торгова марка" {
 			descriptionValue, err := description.Locator(".product-details-value").TextContent()
 			if err != nil {
-				utils.SaveScreenshotOnError(page, err, utils.ErrorContext{Context: "fora_description_value", URL: product.URL})
+				s.logErr(page, err, gateway.ErrorContext{Context: "fora_description_value", URL: product.URL})
 				return nil, err
 			}
 			product.BrandName = strings.TrimSpace(descriptionValue)
@@ -216,4 +218,15 @@ func getProductBrand(page playwright.Page, product *dto.ScrapedProductDto) (*dto
 		}
 	}
 	return nil, err
+}
+
+func (s *ForaScraper) logErr(page playwright.Page, err error, ctx gateway.ErrorContext) {
+	path := s.ErrorLogger.LogError(err, ctx)
+	if path == "" || page == nil {
+		return
+	}
+	page.Screenshot(playwright.PageScreenshotOptions{
+		Path:     playwright.String(path),
+		FullPage: playwright.Bool(true),
+	})
 }
