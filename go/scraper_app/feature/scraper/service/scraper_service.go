@@ -128,7 +128,7 @@ func (s *scraperServiceImpl) scrapeCategory(
 				return totals, fmt.Errorf("get scraper for shop %s: %w", scraperConfig.ShopID, err)
 			}
 
-			group, urlTotals := s.scrapeURL(browser, scraper, url, category)
+			group, urlTotals := s.scrapeURL(scraper, url, category)
 			appendScrapedProducts(out, category, group)
 			totals.add(urlTotals)
 		}
@@ -137,7 +137,6 @@ func (s *scraperServiceImpl) scrapeCategory(
 }
 
 func (s *scraperServiceImpl) scrapeURL(
-	browser playwright.Browser,
 	scraper scrapers.Scraper,
 	url string,
 	category config.ScrapingCategory,
@@ -150,7 +149,7 @@ func (s *scraperServiceImpl) scrapeURL(
 		cachedProducts = nil
 	}
 
-	result := scraper.Scrape(browser, url, cachedProducts)
+	result := scraper.Scrape(url, cachedProducts)
 	products := buildScrapedProducts(result.Products, category.WordsToIgnore)
 
 	group := &entity.ScrapedProducts{

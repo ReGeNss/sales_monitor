@@ -24,8 +24,8 @@ func (s *ForaScraper) GetMarketplaceName() string {
 	return "Фора"
 }
 
-func (s *ForaScraper) Scrape(browser playwright.Browser, url string, cachedProducts *scraper_config.LaterScrapedProducts) *dto.ScrapeResult {
-	context, err := browser.NewContext()
+func (s *ForaScraper) Scrape(url string, cachedProducts *scraper_config.LaterScrapedProducts) *dto.ScrapeResult {
+	context, err := s.Browser.NewContext()
 	if err != nil {
 		log.Fatalf("could not create context: %v", err)
 	}
@@ -66,7 +66,7 @@ func (s *ForaScraper) Scrape(browser playwright.Browser, url string, cachedProdu
 
 		(func() {
 			productURL := product.URL
-			page, err = utils.OpenPage(browser)
+			page, err = utils.OpenPage(s.Browser)
 			if err != nil {
 				log.Fatalf("could not create page: %v", err)
 			}

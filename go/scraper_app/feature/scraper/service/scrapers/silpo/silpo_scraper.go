@@ -23,8 +23,8 @@ func (s *SilpoScraper) GetMarketplaceName() string {
 	return "Сільпо"
 }
 
-func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, cachedProducts *scraper_config.LaterScrapedProducts) *dto.ScrapeResult {
-	page, err := utils.OpenPage(browser)
+func (s *SilpoScraper) Scrape(url string, cachedProducts *scraper_config.LaterScrapedProducts) *dto.ScrapeResult {
+	page, err := utils.OpenPage(s.Browser)
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
 	}
@@ -105,7 +105,7 @@ func (s *SilpoScraper) Scrape(browser playwright.Browser, url string, cachedProd
 
 		(func() {
 			productURL := product.URL
-			page, err = utils.OpenPage(browser)
+			page, err = utils.OpenPage(s.Browser)
 			if err != nil {
 				log.Fatalf("could not create page: %v", err)
 			}
