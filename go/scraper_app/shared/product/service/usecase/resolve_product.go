@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	valueObject "sales_monitor/scraper_app/shared/product/domain/entity/value_object"
 	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	"sales_monitor/scraper_app/shared/product/domain/service"
@@ -38,10 +39,15 @@ func (u *resolveProductUseCase) Execute(input ResolveProductInput) (int, *entity
 		return matched.ID, matched, nil
 	}
 
+	imageURL, err := valueObject.NewUrl(input.Scraped.ImageUrl())
+	if err != nil {
+		return 0, nil, err
+	}
+
 	id, err := u.productRepository.CreateProduct(&entity.Product{
 		Name:            input.Scraped.Name(),
 		NameFingerprint: input.Fingerprint,
-		ImageURL:        input.Scraped.ImageUrl(),
+		ImageURL:        *imageURL,
 		BrandID:         input.BrandID,
 		CategoryID:      input.CategoryID,
 	}, input.Attributes)

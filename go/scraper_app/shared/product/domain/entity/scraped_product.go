@@ -21,9 +21,9 @@ type ScrapedProduct struct {
 	name         string
 	regularPrice *valueObject.PriceValue
 	specialPrice *valueObject.PriceValue
-	image        string
+	image        *valueObject.Url
 	brandName    string
-	url          string
+	url          *valueObject.Url
 	volume       string
 	weight       string
 }
@@ -31,7 +31,7 @@ type ScrapedProduct struct {
 func (s *ScrapedProduct) Name() string          { return s.name }
 func (s *ScrapedProduct) RegularPrice() float64 { return s.regularPrice.GetPrice() }
 func (s *ScrapedProduct) SpecialPrice() float64 { return s.specialPrice.GetPrice() }
-func (s *ScrapedProduct) ImageUrl() string      { return s.image }
+func (s *ScrapedProduct) ImageUrl() string      { return s.URL() }
 
 func (s *ScrapedProduct) BrandName() string { return s.brandName }
 
@@ -44,7 +44,7 @@ func (s *ScrapedProduct) SetBrandName(brand string) exception.IDomainError {
 	return nil
 }
 
-func (s *ScrapedProduct) URL() string    { return s.url }
+func (s *ScrapedProduct) URL() string    { return s.url.Url() }
 func (s *ScrapedProduct) Volume() string { return s.volume }
 func (s *ScrapedProduct) Weight() string { return s.weight }
 
@@ -53,7 +53,7 @@ func (s *ScrapedProduct) Validate() exception.IDomainError {
 		return exception.NewDomainError("Name is empty")
 	}
 
-	if s.url == "" {
+	if s.url == nil {
 		return exception.NewDomainError("url is empty")
 	}
 
@@ -103,9 +103,14 @@ func NewScrapedProduct(
 		return nil, exception.NewDomainError("Brand is empty")
 	}
 
-	var validUrl = strings.TrimSpace(url)
-	if validUrl == "" {
-		return nil, exception.NewDomainError("url is empty")
+	validUrl, urlErr := valueObject.NewUrl(url)
+	if urlErr != nil {
+		return nil, urlErr
+	}
+
+	validImageUrl, urlErr := valueObject.NewUrl(image)
+	if urlErr != nil {
+		return nil, urlErr
 	}
 
 	validRegularPrice, err := valueObject.NewPriceValue(fmt.Sprintf("%f", regularPrice))
@@ -122,7 +127,7 @@ func NewScrapedProduct(
 		name:         validName,
 		regularPrice: validRegularPrice,
 		specialPrice: validSpecialPrice,
-		image:        image,
+		image:        validImageUrl,
 		brandName:    validBrandName,
 		url:          validUrl,
 		volume:       volume,
@@ -152,14 +157,14 @@ func CreateEmptyScrapedProduct(name string, regularPrice string, specialPrice st
 		return nil, exception.NewDomainError("price smaller then ")
 	}
 
-	validUrl := strings.TrimSpace(url)
-	if validUrl == "" {
-		return nil, exception.NewDomainError("url is empty")
+	validUrl, urlErr := valueObject.NewUrl(url)
+	if urlErr != nil {
+		return nil, urlErr
 	}
 
-	validImageUrl := strings.TrimSpace(imageUrl)
-	if validName == "" {
-		return nil, exception.NewDomainError("image url is empty")
+	validImageUrl, err := valueObject.NewUrl(imageUrl)
+	if err != nil {
+		return nil, err
 	}
 
 	return &ScrapedProduct{

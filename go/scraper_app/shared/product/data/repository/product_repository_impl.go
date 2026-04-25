@@ -28,7 +28,13 @@ func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint *string, bra
 	if err := query.First(&product).Error; err != nil {
 		return nil, err
 	}
-	return mapper.ProductToEntity(&product), nil
+	entity, err := mapper.ProductToEntity(&product)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return entity, nil
 }
 
 func (p *productRepositoryImpl) FindSimilarCandidates(fingerprint *string, attributes []*entity.ProductAttribute, brandID int, categoryID int) ([]*entity.Product, exception.IDomainError) {
@@ -44,7 +50,11 @@ func (p *productRepositoryImpl) FindSimilarCandidates(fingerprint *string, attri
 		if err != nil {
 			return nil, err
 		}
-		return []*entity.Product{mapper.ProductToEntity(&product)}, nil
+		e, err := mapper.ProductToEntity(&product)
+		if err != nil {
+			return nil, err
+		}
+		return []*entity.Product{e}, nil
 	}
 
 	var products []models.Product
@@ -58,7 +68,11 @@ func (p *productRepositoryImpl) FindSimilarCandidates(fingerprint *string, attri
 
 	candidates := make([]*entity.Product, 0, len(products))
 	for i := range products {
-		candidates = append(candidates, mapper.ProductToEntity(&products[i]))
+		e, err := mapper.ProductToEntity(&products[i])
+		if err != nil {
+			return nil, err
+		}
+		candidates = append(candidates, e)
 	}
 	return candidates, nil
 }
