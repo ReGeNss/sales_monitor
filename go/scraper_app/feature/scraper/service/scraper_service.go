@@ -154,8 +154,8 @@ func (s *scraperServiceImpl) categoryNames() []string {
 func countProductsOnSale(products []*entity.ScrapedProduct) int {
 	count := 0
 	for _, p := range products {
-		if p.SpecialPrice > 0 && p.RegularPrice < p.SpecialPrice {
-			count++
+		if p.SpecialPrice() > 0 && p.RegularPrice() < p.SpecialPrice() {
+		count++
 		}
 	}
 	return count

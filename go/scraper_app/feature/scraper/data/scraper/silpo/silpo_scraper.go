@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/cache"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/page"
-	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/parse"
-	"sales_monitor/scraper_app/feature/scraper/data/scraper/model"
 	"sales_monitor/scraper_app/feature/scraper/domain/entity"
+	product "sales_monitor/scraper_app/shared/product/domain/entity"
+
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 	"strings"
 	"time"
@@ -87,16 +87,16 @@ func (s *SilpoScraper) Scrape(url string, cachedProducts *entity.LaterScrapedPro
 		curLen = stableCount
 	}
 
-	products := s.getProducts(p)
+	products := s.getProducts(p, wordsToIgnore)
 	p.Close()
 
-	productsWithBrand := []*model.ScrapedProduct{}
+	productsWithBrand := []*product.ScrapedProduct{}
 	newCount := 0
 
 	for _, product := range products {
 		inCache := false
 		if cachedProducts != nil {
-			cachedProduct, ok := (*cachedProducts)[product.URL]
+			cachedProduct, ok := (*cachedProducts)[product.URL()]
 			if ok {
 				inCache = true
 				if cache.IsUpToDate(&cachedProduct, product) {
@@ -112,15 +112,20 @@ func (s *SilpoScraper) Scrape(url string, cachedProducts *entity.LaterScrapedPro
 				log.Fatalf("could not create page: %v", err)
 			}
 			defer p.Close()
-			p.Goto(productURL)
+			p.Goto(productURL())
 			p.WaitForLoadState()
 
 			product, err = s.getProductDetails(p, product)
 			if err != nil {
-				s.logErr(p, err, gateway.ErrorContext{Context: "silpo_product_details", URL: productURL})
+				s.logErr(p, err, gateway.ErrorContext{Context: "silpo_product_details", URL: productURL()})
 				log.Printf("could not get product brand: %v", err)
 				return
 			}
+
+			if err = product.Validate(); err != nil {
+				return
+			}
+
 			if !inCache {
 				newCount++
 			}
@@ -129,7 +134,7 @@ func (s *SilpoScraper) Scrape(url string, cachedProducts *entity.LaterScrapedPro
 	}
 
 	return &entity.ScrapeResult{
-		Products:   parse.ToEntityProducts(productsWithBrand, wordsToIgnore),
+		Products:   productsWithBrand,
 		FoundCount: len(products),
 		NewCount:   newCount,
 	}
@@ -163,8 +168,8 @@ func (s *SilpoScraper) waitForStableElementCount(p playwright.Page, selector str
 	return lastCount
 }
 
-func (s *SilpoScraper) getProducts(p playwright.Page) []*model.ScrapedProduct {
-	products := []*model.ScrapedProduct{}
+func (s *SilpoScraper) getProducts(p playwright.Page, wordsToIgnore []string) []*product.ScrapedProduct {
+	products := []*product.ScrapedProduct{}
 
 	result, err := p.Evaluate(`
 		() => {
@@ -236,13 +241,18 @@ func (s *SilpoScraper) getProducts(p playwright.Page) []*model.ScrapedProduct {
 			continue
 		}
 
-		product := parse.NewScrapedProduct(
+		product, err := product.CreateEmptyScrapedProduct(
 			title,
 			oldPrice,
 			currentPrice,
 			imgSrc,
 			url,
+			wordsToIgnore,
 		)
+
+		if err != nil {
+			continue
+		}
 
 		products = append(products, product)
 	}
@@ -250,10 +260,10 @@ func (s *SilpoScraper) getProducts(p playwright.Page) []*model.ScrapedProduct {
 	return products
 }
 
-func (s *SilpoScraper) getProductDetails(p playwright.Page, product *model.ScrapedProduct) (*model.ScrapedProduct, error) {
+func (s *SilpoScraper) getProductDetails(p playwright.Page, product *product.ScrapedProduct) (*product.ScrapedProduct, error) {
 	title, err := p.Locator("h1").TextContent()
 	if err != nil {
-		s.logErr(p, err, gateway.ErrorContext{Context: "silpo_title", URL: product.URL})
+		s.logErr(p, err, gateway.ErrorContext{Context: "silpo_title", URL: product.URL()})
 		log.Printf("could not get volume, weight: %v", err)
 		return nil, err
 	}
@@ -261,21 +271,21 @@ func (s *SilpoScraper) getProductDetails(p playwright.Page, product *model.Scrap
 	re := regexp.MustCompile(`[\d|\,|\.]+[А-я-a-z|\s]+$`)
 	amount := re.FindAllString(strings.TrimSpace(title), -1)
 	if len(amount) == 0 || len(amount[len(amount)-1]) == 0 {
-		s.logErr(p, err, gateway.ErrorContext{Context: "silpo_amount", URL: product.URL})
+		s.logErr(p, err, gateway.ErrorContext{Context: "silpo_amount", URL: product.URL()})
 		log.Printf("could not get amount: %v", err)
 		return nil, err
 	}
 
-	err = parse.SetVolumeOrWeight(product, amount[len(amount)-1])
+	err = product.SetVolumeOrWeight(amount[len(amount)-1])
 	if err != nil {
-		s.logErr(p, err, gateway.ErrorContext{Context: "silpo_volume_weight", URL: product.URL})
+		s.logErr(p, err, gateway.ErrorContext{Context: "silpo_volume_weight", URL: product.URL()})
 		log.Printf("could not set volume or weight: %v", err)
 		return nil, err
 	}
 
 	descriptions, err := p.Locator(".mat-expansion-panel").All()
 	if err != nil {
-		s.logErr(p, err, gateway.ErrorContext{Context: "silpo_descriptions", URL: product.URL})
+		s.logErr(p, err, gateway.ErrorContext{Context: "silpo_descriptions", URL: product.URL()})
 		log.Printf("could not get brand: %v", err)
 	}
 
@@ -288,7 +298,7 @@ func (s *SilpoScraper) getProductDetails(p playwright.Page, product *model.Scrap
 		if strings.Contains(textContent, "Загальна інформація") {
 			description, err := item.Locator(".attributes-list_block").All()
 			if err != nil {
-				s.logErr(p, err, gateway.ErrorContext{Context: "silpo_attributes", URL: product.URL})
+				s.logErr(p, err, gateway.ErrorContext{Context: "silpo_attributes", URL: product.URL()})
 				return nil, err
 			}
 			for _, attribute := range description {
@@ -297,10 +307,15 @@ func (s *SilpoScraper) getProductDetails(p playwright.Page, product *model.Scrap
 				if strings.TrimSpace(attributeTitle) == "Торгова марка" {
 					attributeValue, err := attribute.Locator(".attributes-list_block-value").TextContent()
 					if err != nil {
-						s.logErr(p, err, gateway.ErrorContext{Context: "silpo_brand_value", URL: product.URL})
+						s.logErr(p, err, gateway.ErrorContext{Context: "silpo_brand_value", URL: product.URL()})
 						return nil, err
 					}
-					product.BrandName = strings.TrimSpace(attributeValue)
+					err = product.SetBrandName(attributeValue)
+
+					if err != nil {
+						return nil, err
+					}
+
 					return product, nil
 				}
 			}

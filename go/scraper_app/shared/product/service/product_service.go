@@ -155,16 +155,17 @@ func (s *productServiceImpl) processProducts(
 
 func buildAttributes(product *entity.ScrapedProduct) []*entity.ProductAttribute {
 	attributes := []*entity.ProductAttribute{}
-	if product.Volume != "" {
+	volume := product.Volume()
+	if volume != "" {
 		attributes = append(attributes, &entity.ProductAttribute{
 			Type:  entity.AttributeTypeVolume,
-			Value: product.Volume,
+			Value: volume,
 		})
 	}
-	if product.Weight != "" {
+	if product.Weight() != "" {
 		attributes = append(attributes, &entity.ProductAttribute{
 			Type:  entity.AttributeTypeWeight,
-			Value: product.Weight,
+			Value: product.Weight(),
 		})
 	}
 	return attributes

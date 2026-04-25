@@ -39,9 +39,9 @@ func (u *resolveProductUseCase) Execute(input ResolveProductInput) (int, *entity
 	}
 
 	id, err := u.productRepository.CreateProduct(&entity.Product{
-		Name:            input.Scraped.Name,
+		Name:            input.Scraped.Name(),
 		NameFingerprint: input.Fingerprint,
-		ImageURL:        input.Scraped.Image,
+		ImageURL:        input.Scraped.ImageUrl(),
 		BrandID:         input.BrandID,
 		CategoryID:      input.CategoryID,
 	}, input.Attributes)

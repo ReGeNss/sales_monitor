@@ -7,10 +7,10 @@ import (
 	"regexp"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/cache"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/page"
-	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/parse"
-	"sales_monitor/scraper_app/feature/scraper/data/scraper/model"
 	"sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/feature/scraper/domain/exception"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
+	scrapingResult "sales_monitor/scraper_app/shared/product/domain/entity"
 	"strconv"
 	"strings"
 
@@ -36,10 +36,10 @@ func (s *AtbScraper) Scrape(url string, cachedProducts *entity.LaterScrapedProdu
 
 	countOfAllPages := s.getCountOfAllPages(p)
 
-	var products []*model.ScrapedProduct
+	var products []*scrapingResult.ScrapedProduct
 
 	for i := 1; i < countOfAllPages; i++ {
-		products = append(products, s.getProducts(p)...)
+		products = append(products, s.getProducts(p, wordsToIgnore)...)
 		p.Close()
 
 		p, err = page.Open(s.Browser)
@@ -51,15 +51,15 @@ func (s *AtbScraper) Scrape(url string, cachedProducts *entity.LaterScrapedProdu
 		p.WaitForLoadState()
 	}
 
-	products = append(products, s.getProducts(p)...)
+	products = append(products, s.getProducts(p, wordsToIgnore)...)
 	p.Close()
 
-	productsWithBrand := []*model.ScrapedProduct{}
+	productsWithBrand := []*scrapingResult.ScrapedProduct{}
 	newCount := 0
 	for _, product := range products {
 		inCache := false
 		if cachedProducts != nil {
-			cachedProduct, ok := (*cachedProducts)[product.URL]
+			cachedProduct, ok := (*cachedProducts)[product.URL()]
 			if ok {
 				inCache = true
 				if cache.IsUpToDate(&cachedProduct, product) {
@@ -74,24 +74,31 @@ func (s *AtbScraper) Scrape(url string, cachedProducts *entity.LaterScrapedProdu
 				log.Fatalf("could not create page: %v", err)
 			}
 			defer p.Close()
-			p.Goto(product.URL)
+			p.Goto(product.URL())
 			p.WaitForLoadState()
 
 			product, err = s.getProductDetails(p, product)
 			if err != nil {
-				s.logErr(p, err, gateway.ErrorContext{Context: "atb_product_details", URL: product.URL})
+				s.logErr(p, err, gateway.ErrorContext{Context: "atb_product_details", URL: product.URL()})
 				log.Printf("could not get product brand: %v", err)
 				return
 			}
+
+			if err = product.Validate(); err != nil {
+				return;
+			}
+
 			if !inCache {
 				newCount++
 			}
+
+
 			productsWithBrand = append(productsWithBrand, product)
 		})()
 	}
 
 	return &entity.ScrapeResult{
-		Products:   parse.ToEntityProducts(productsWithBrand, wordsToIgnore),
+		Products:   productsWithBrand,
 		FoundCount: len(products),
 		NewCount:   newCount,
 	}
@@ -124,8 +131,8 @@ func (s *AtbScraper) getCountOfAllPages(p playwright.Page) int {
 	return int(math.Ceil(float64(countAll) / float64(countPerPage)))
 }
 
-func (s *AtbScraper) getProducts(p playwright.Page) []*model.ScrapedProduct {
-	products := []*model.ScrapedProduct{}
+func (s *AtbScraper) getProducts(p playwright.Page, wordsToIgnore[]string) []*scrapingResult.ScrapedProduct {
+	products := []*scrapingResult.ScrapedProduct{}
 
 	items, ok := p.Locator(".catalog-item").All()
 	if ok != nil {
@@ -176,13 +183,18 @@ func (s *AtbScraper) getProducts(p playwright.Page) []*model.ScrapedProduct {
 			imgSrc = ""
 		}
 
-		product := parse.NewScrapedProduct(
+		product, err := scrapingResult.CreateEmptyScrapedProduct(
 			strings.TrimSpace(title),
 			oldPrice,
 			currentPrice,
 			imgSrc,
 			"https://www.atbmarket.com"+productLink,
+			wordsToIgnore,
 		)
+
+		if err != nil {
+			continue
+		}
 
 		products = append(products, product)
 	}
@@ -190,10 +202,10 @@ func (s *AtbScraper) getProducts(p playwright.Page) []*model.ScrapedProduct {
 	return products
 }
 
-func (s *AtbScraper) getProductDetails(p playwright.Page, product *model.ScrapedProduct) (*model.ScrapedProduct, error) {
+func (s *AtbScraper) getProductDetails(p playwright.Page, product *scrapingResult.ScrapedProduct) (*scrapingResult.ScrapedProduct, exception.IDomainError) {
 	brandElement, err := p.Locator(".product-characteristics__item").All()
 	if err != nil {
-		s.logErr(p, err, gateway.ErrorContext{Context: "atb_brand_elements", URL: product.URL})
+		s.logErr(p, err, gateway.ErrorContext{Context: "atb_brand_elements", URL: product.URL()})
 		log.Printf("could not get brand: %v", err)
 		return nil, err
 	}
@@ -204,26 +216,29 @@ func (s *AtbScraper) getProductDetails(p playwright.Page, product *model.Scraped
 		}
 
 		if elementTitle == "Торгова марка" {
-			brandName, err := s.getProductAttributeValue(p, item, product.URL)
+			brandName, err := s.getProductAttributeValue(p, item, product.URL())
 			if err != nil {
-				s.logErr(p, err, gateway.ErrorContext{Context: "atb_brand_name", URL: product.URL})
+				s.logErr(p, err, gateway.ErrorContext{Context: "atb_brand_name", URL: product.URL()})
 				log.Printf("could not get brand name: %v", err)
 				return nil, err
 			}
-			product.BrandName = brandName
+			if err = product.SetBrandName(brandName); err != nil {
+				return nil, err
+			}
+			
 		}
 
 		if elementTitle == "Об’єм" {
-			volume, err := s.getProductAttributeValue(p, item, product.URL)
+			volume, err := s.getProductAttributeValue(p, item, product.URL())
 			if err == nil {
-				parse.SetVolumeOrWeight(product, volume)
+				product.SetVolumeOrWeight(volume)
 			}
 		}
 
 		if elementTitle == "Вага" {
-			weight, err := s.getProductAttributeValue(p, item, product.URL)
+			weight, err := s.getProductAttributeValue(p, item, product.URL())
 			if err == nil {
-				parse.SetVolumeOrWeight(product, weight)
+				product.SetVolumeOrWeight(weight)
 			}
 		}
 	}

@@ -1,18 +1,9 @@
 package model
 
-type ScrapedProduct struct {
-	Name         string
-	RegularPrice float64
-	SpecialPrice float64
-	ImageURL     string
-	URL          string
-	BrandName    string
-	Volume       string
-	Weight       string
-}
+import "sales_monitor/scraper_app/shared/product/domain/entity"
 
 type ScrapeResult struct {
-	Products   []*ScrapedProduct
+	Products   []*entity.Product
 	FoundCount int
 	NewCount   int
 }

@@ -4,8 +4,8 @@ import (
 	"log"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/cache"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/page"
-	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/parse"
-	"sales_monitor/scraper_app/feature/scraper/data/scraper/model"
+	product "sales_monitor/scraper_app/shared/product/domain/entity"
+
 	"sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 	"strings"
@@ -45,15 +45,15 @@ func (s *ForaScraper) Scrape(url string, cachedProducts *entity.LaterScrapedProd
 		}
 	}
 
-	products := s.getProducts(p)
+	products := s.getProducts(p, wordsToIgnore)
 	p.Close()
 
-	productsWithBrand := []*model.ScrapedProduct{}
+	productsWithBrand := []*product.ScrapedProduct{}
 	newCount := 0
 	for _, product := range products {
 		inCache := false
 		if cachedProducts != nil {
-			cachedProduct, ok := (*cachedProducts)[product.URL]
+			cachedProduct, ok := (*cachedProducts)[product.URL()]
 			if ok {
 				inCache = true
 				if cache.IsUpToDate(&cachedProduct, product) {
@@ -69,16 +69,22 @@ func (s *ForaScraper) Scrape(url string, cachedProducts *entity.LaterScrapedProd
 				log.Fatalf("could not create page: %v", err)
 			}
 
-			p.Goto(productURL)
+			p.Goto(productURL())
 			defer p.Close()
 			p.WaitForLoadState()
 
 			product, err = s.getProductBrand(p, product)
 			if err != nil {
-				s.logErr(p, err, gateway.ErrorContext{Context: "fora_product_brand", URL: productURL})
+				s.logErr(p, err, gateway.ErrorContext{Context: "fora_product_brand", URL: productURL()})
 				log.Printf("could not get product brand: %v", err)
 				return
 			}
+
+			if err = product.Validate(); err != nil {
+				return 
+			}
+
+
 			if !inCache {
 				newCount++
 			}
@@ -87,14 +93,14 @@ func (s *ForaScraper) Scrape(url string, cachedProducts *entity.LaterScrapedProd
 	}
 
 	return &entity.ScrapeResult{
-		Products:   parse.ToEntityProducts(productsWithBrand, wordsToIgnore),
+		Products:   productsWithBrand,
 		FoundCount: len(products),
 		NewCount:   newCount,
 	}
 }
 
-func (s *ForaScraper) getProducts(p playwright.Page) []*model.ScrapedProduct {
-	products := []*model.ScrapedProduct{}
+func (s *ForaScraper) getProducts(p playwright.Page, wordsToIgnore []string) []*product.ScrapedProduct {
+	products := []*product.ScrapedProduct{}
 
 	items, err := p.Locator(".product-list-item").All()
 	if err != nil {
@@ -162,13 +168,17 @@ func (s *ForaScraper) getProducts(p playwright.Page) []*model.ScrapedProduct {
 			imgSrc = ""
 		}
 
-		product := parse.NewScrapedProduct(
+		product, err := product.CreateEmptyScrapedProduct(
 			title,
 			oldPrice,
 			currentPrice,
 			imgSrc,
 			"https://fora.ua"+productLink,
+			wordsToIgnore,
 		)
+		if err != nil {
+			continue
+		}
 
 		products = append(products, product)
 	}
@@ -176,19 +186,19 @@ func (s *ForaScraper) getProducts(p playwright.Page) []*model.ScrapedProduct {
 	return products
 }
 
-func (s *ForaScraper) getProductBrand(p playwright.Page, product *model.ScrapedProduct) (*model.ScrapedProduct, error) {
+func (s *ForaScraper) getProductBrand(p playwright.Page, product *product.ScrapedProduct) (*product.ScrapedProduct, error) {
 	amount, err := p.Locator(".preview-product-weight").InnerText()
 	if err != nil {
-		s.logErr(p, err, gateway.ErrorContext{Context: "fora_amount", URL: product.URL})
+		s.logErr(p, err, gateway.ErrorContext{Context: "fora_amount", URL: product.URL()})
 		log.Printf("could not get amount: %v", err)
 		return nil, err
 	}
 
-	parse.SetVolumeOrWeight(product, amount)
+	product.SetVolumeOrWeight(amount)
 
 	descriptions, err := p.Locator(".product-details-column.trademark").All()
 	if err != nil {
-		s.logErr(p, err, gateway.ErrorContext{Context: "fora_descriptions", URL: product.URL})
+		s.logErr(p, err, gateway.ErrorContext{Context: "fora_descriptions", URL: product.URL()})
 		log.Printf("could not get descriptions: %v", err)
 		return nil, err
 	}
@@ -202,10 +212,10 @@ func (s *ForaScraper) getProductBrand(p playwright.Page, product *model.ScrapedP
 		if strings.TrimSpace(descriptionLabel) == "Торгова марка" {
 			descriptionValue, err := description.Locator(".product-details-value").TextContent()
 			if err != nil {
-				s.logErr(p, err, gateway.ErrorContext{Context: "fora_description_value", URL: product.URL})
+				s.logErr(p, err, gateway.ErrorContext{Context: "fora_description_value", URL: product.URL()})
 				return nil, err
 			}
-			product.BrandName = strings.TrimSpace(descriptionValue)
+			product.SetBrandName(descriptionValue)
 			return product, nil
 		}
 	}

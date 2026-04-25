@@ -34,22 +34,24 @@ func NewRecordPriceUseCase(
 }
 
 func (u *recordPriceUseCase) Execute(input RecordPriceInput) (*entity.Product, exception.IDomainError) {
-	if marketplaceProductID, ok := input.KnownMarketplaceURLs[input.Scraped.URL]; ok {
+	if marketplaceProductID, ok := input.KnownMarketplaceURLs[input.Scraped.URL()]; ok {
+		knownSpecialPrice := input.Scraped.SpecialPrice()
 		u.marketplaceRepository.AddPriceToMarketplaceProductID(
 			marketplaceProductID,
-			input.Scraped.RegularPrice,
-			&input.Scraped.SpecialPrice,
+			input.Scraped.RegularPrice(),
+			&knownSpecialPrice,
 		)
 	}
 
 	priceDrop := u.detectPriceDrop(input)
 
+	specialPrice := input.Scraped.SpecialPrice()
 	if err := u.marketplaceRepository.AddPriceToMarketplaceProduct(
 		input.ProductID,
 		input.MarketplaceID,
-		input.Scraped.URL,
-		input.Scraped.RegularPrice,
-		&input.Scraped.SpecialPrice,
+		input.Scraped.URL(),
+		input.Scraped.RegularPrice(),
+		&specialPrice,
 	); err != nil {
 		return nil, err
 	}
@@ -64,7 +66,7 @@ func (u *recordPriceUseCase) detectPriceDrop(input RecordPriceInput) *entity.Pro
 	if err != nil || latest == nil || latest.SpecialPrice == nil {
 		return nil
 	}
-	if *latest.SpecialPrice < input.Scraped.SpecialPrice {
+	if *latest.SpecialPrice < input.Scraped.SpecialPrice() {
 		return input.ExistingProduct
 	}
 	return nil

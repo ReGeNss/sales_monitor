@@ -41,11 +41,11 @@ func groupByBrand(products []*entity.ScrapedProduct) (map[string][]*entity.Scrap
 		if product == nil {
 			continue
 		}
-		if product.BrandName == "" {
+		if product.BrandName() == "" {
 			unknown = append(unknown, product)
 			continue
 		}
-		grouped[product.BrandName] = append(grouped[product.BrandName], product)
+		grouped[product.BrandName()] = append(grouped[product.BrandName()], product)
 	}
 	return grouped, unknown
 }
@@ -61,7 +61,7 @@ func matchUnknownByName(unknown []*entity.ScrapedProduct, grouped map[string][]*
 
 	for _, product := range unknown {
 		for brandName := range known {
-			if strings.Contains(product.Name, brandName) {
+			if strings.Contains(product.Name(), brandName) {
 				grouped[brandName] = append(grouped[brandName], product)
 				break
 			}

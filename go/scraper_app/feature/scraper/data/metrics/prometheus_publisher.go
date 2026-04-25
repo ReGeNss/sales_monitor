@@ -39,14 +39,14 @@ func extractSample(results map[string]*entity.ScrapingResult) (name string, pric
 				continue
 			}
 			p := sp.Products[0]
-			if p == nil || p.Name == "" {
+			if p == nil || p.Name() == "" {
 				continue
 			}
-			price = p.RegularPrice
-			if p.SpecialPrice > 0 {
-				price = p.SpecialPrice
+			price = p.RegularPrice()
+			if p.SpecialPrice() > 0 {
+				price = p.SpecialPrice()
 			}
-			return p.Name, price, cat, sp.MarketplaceName, true
+			return p.Name(), price, cat, sp.MarketplaceName, true
 		}
 	}
 	return "", 0, "", "", false
