@@ -8,6 +8,7 @@ import (
 	scraper_logging "sales_monitor/scraper_app/feature/scraper/data/logging"
 	scraper_metrics "sales_monitor/scraper_app/feature/scraper/data/metrics"
 	cached_scraped_product_repository "sales_monitor/scraper_app/feature/scraper/data/repository"
+	scraper_factory "sales_monitor/scraper_app/feature/scraper/data/scraper"
 	scraper_storage "sales_monitor/scraper_app/feature/scraper/data/storage"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	scraper_service "sales_monitor/scraper_app/feature/scraper/service"
@@ -44,13 +45,22 @@ func Run(plan scraper.ScrapingPlan) error {
 		product_gateway.NewNotificationPublisher(db.GetRedis()),
 	)
 
+	errorLogger := scraper_logging.NewScreenshotErrorLogger()
+
+	scraperFactory, err := scraper_factory.NewScraperFactory(errorLogger)
+	if err != nil {
+		return err
+	}
+	defer scraperFactory.Close()
+
 	scraperService := scraper_service.NewScraperService(
 		plan,
 		productService,
 		cachedScrapedProductService,
+		scraperFactory,
 		scraper_storage.NewFileResultStorage(os.Getenv("SCRAPED_DATA_FOLDER")),
 		scraper_metrics.NewPrometheusPublisher(),
-		scraper_logging.NewScreenshotErrorLogger(),
+		errorLogger,
 	)
 
 	scrapedProducts, err := scraperService.Scrape()

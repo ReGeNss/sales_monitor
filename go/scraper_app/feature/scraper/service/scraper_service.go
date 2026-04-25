@@ -5,12 +5,8 @@ import (
 	"log"
 	config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
-	"sales_monitor/scraper_app/feature/scraper/service/dto"
-	"sales_monitor/scraper_app/feature/scraper/service/scrapers"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
-
-	"github.com/playwright-community/playwright-go"
 )
 
 type ScraperService interface {
@@ -21,6 +17,7 @@ type scraperServiceImpl struct {
 	configuration               config.ScrapingPlan
 	productService              service.ProductService
 	cachedScrapedProductService CachedScrapedProductService
+	scraperFactory              gateway.ScraperFactory
 	resultStorage               gateway.ResultStorage
 	metricsPublisher            gateway.MetricsPublisher
 	errorLogger                 gateway.ErrorLogger
@@ -30,6 +27,7 @@ func NewScraperService(
 	configuration config.ScrapingPlan,
 	productService service.ProductService,
 	cachedScrapedProductService CachedScrapedProductService,
+	scraperFactory gateway.ScraperFactory,
 	resultStorage gateway.ResultStorage,
 	metricsPublisher gateway.MetricsPublisher,
 	errorLogger gateway.ErrorLogger,
@@ -38,6 +36,7 @@ func NewScraperService(
 		configuration:               configuration,
 		productService:              productService,
 		cachedScrapedProductService: cachedScrapedProductService,
+		scraperFactory:              scraperFactory,
 		resultStorage:               resultStorage,
 		metricsPublisher:            metricsPublisher,
 		errorLogger:                 errorLogger,
@@ -56,17 +55,11 @@ func (t *scrapeTotals) add(other scrapeTotals) {
 }
 
 func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error) {
-	browser, closeBrowser, err := launchBrowser()
-	if err != nil {
-		return nil, err
-	}
-	defer closeBrowser()
-
 	scrapedProducts := map[string]*config.ScrapingResult{}
 	var totals scrapeTotals
 
 	for _, category := range s.configuration.Categories {
-		categoryTotals, err := s.scrapeCategory(browser, category, scrapedProducts)
+		categoryTotals, err := s.scrapeCategory(category, scrapedProducts)
 		if err != nil {
 			return nil, err
 		}
@@ -85,37 +78,7 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 	return scrapedProducts, nil
 }
 
-func launchBrowser() (playwright.Browser, func(), error) {
-	pw, err := playwright.Run()
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not start playwright: %w", err)
-	}
-
-	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
-		Headless: playwright.Bool(true),
-		Args: []string{
-			"--disable-blink-features=AutomationControlled",
-			"--disable-dev-shm-usage",
-		},
-	})
-	if err != nil {
-		pw.Stop()
-		return nil, nil, fmt.Errorf("could not launch browser: %w", err)
-	}
-
-	cleanup := func() {
-		if err := browser.Close(); err != nil {
-			log.Printf("could not close browser: %v", err)
-		}
-		if err := pw.Stop(); err != nil {
-			log.Printf("could not stop playwright: %v", err)
-		}
-	}
-	return browser, cleanup, nil
-}
-
 func (s *scraperServiceImpl) scrapeCategory(
-	browser playwright.Browser,
 	category config.ScrapingCategory,
 	out map[string]*config.ScrapingResult,
 ) (scrapeTotals, error) {
@@ -123,7 +86,7 @@ func (s *scraperServiceImpl) scrapeCategory(
 
 	for _, scraperConfig := range category.ScrapersConfigs {
 		for _, url := range scraperConfig.URLs {
-			scraper, err := scrapers.GetScraperByShopName(scraperConfig.ShopID, browser, s.errorLogger)
+			scraper, err := s.scraperFactory.Get(scraperConfig.ShopID)
 			if err != nil {
 				return totals, fmt.Errorf("get scraper for shop %s: %w", scraperConfig.ShopID, err)
 			}
@@ -137,7 +100,7 @@ func (s *scraperServiceImpl) scrapeCategory(
 }
 
 func (s *scraperServiceImpl) scrapeURL(
-	scraper scrapers.Scraper,
+	scraper gateway.Scraper,
 	url string,
 	category config.ScrapingCategory,
 ) (*entity.ScrapedProducts, scrapeTotals) {
@@ -149,42 +112,20 @@ func (s *scraperServiceImpl) scrapeURL(
 		cachedProducts = nil
 	}
 
-	result := scraper.Scrape(url, cachedProducts)
-	products := buildScrapedProducts(result.Products, category.WordsToIgnore)
+	result := scraper.Scrape(url, cachedProducts, category.WordsToIgnore)
 
 	group := &entity.ScrapedProducts{
-		Products:        products,
+		Products:        result.Products,
 		MarketplaceName: marketplaceName,
 	}
 
 	totals := scrapeTotals{
 		found:   result.FoundCount,
-		scraped: len(products),
+		scraped: len(result.Products),
 		new:     result.NewCount,
-		onSale:  countProductsOnSale(products),
+		onSale:  countProductsOnSale(result.Products),
 	}
 	return group, totals
-}
-
-func buildScrapedProducts(raw []*dto.ScrapedProductDto, wordsToIgnore []string) []*entity.ScrapedProduct {
-	products := make([]*entity.ScrapedProduct, 0, len(raw))
-	for _, p := range raw {
-		product, _ := entity.NewScrapedProduct(
-			p.Name,
-			p.RegularPrice,
-			p.SpecialPrice,
-			p.ImageURL,
-			p.URL,
-			p.BrandName,
-			p.Volume,
-			p.Weight,
-			wordsToIgnore,
-		)
-		if product != nil {
-			products = append(products, product)
-		}
-	}
-	return products
 }
 
 func appendScrapedProducts(

@@ -1,32 +1,22 @@
-package dto
+package parse
 
 import (
 	"log"
 	"regexp"
+	regexps "sales_monitor/scraper_app/core/regexp"
+	"sales_monitor/scraper_app/feature/scraper/data/scraper/model"
 	"strconv"
 	"strings"
-	regexps "sales_monitor/scraper_app/core/regexp"
 )
 
-type ScrapedProductDto struct {
-	Name         string
-	RegularPrice float64
-	SpecialPrice float64
-	ImageURL     string
-	URL          string
-	BrandName    string
-	Volume       string
-	Weight       string
-}
-
-func CreateScrapedProductDto(
+func NewScrapedProduct(
 	name string,
 	regularPrice string,
 	specialPrice string,
 	imageURL string,
 	url string,
-) *ScrapedProductDto {
-	return &ScrapedProductDto{
+) *model.ScrapedProduct {
+	return &model.ScrapedProduct{
 		Name:         name,
 		RegularPrice: parsePrice(regularPrice),
 		SpecialPrice: parsePrice(specialPrice),
@@ -35,10 +25,22 @@ func CreateScrapedProductDto(
 	}
 }
 
-func parsePrice(priceText string) float64 {	
+func SetVolumeOrWeight(p *model.ScrapedProduct, name string) error {
+	formattedValue, isVolume, err := getVolumeOrWeightFromName(name)
+	if err != nil {
+		return err
+	}
+	if isVolume {
+		p.Volume = strconv.FormatFloat(formattedValue, 'f', 3, 64)
+	} else {
+		p.Weight = strconv.FormatFloat(formattedValue, 'f', 3, 64)
+	}
+	return nil
+}
+
+func parsePrice(priceText string) float64 {
 	re := regexp.MustCompile(`[^\d.,]`)
 	cleaned := re.ReplaceAllString(priceText, "")
-
 	cleaned = strings.Replace(cleaned, ",", ".", -1)
 
 	price, err := strconv.ParseFloat(cleaned, 64)
@@ -46,22 +48,7 @@ func parsePrice(priceText string) float64 {
 		log.Printf("could not parse price '%s': %v", priceText, err)
 		return 0
 	}
-
 	return price
-}
-
-func (s *ScrapedProductDto) ScraperSetVolumeOrWeight(name string) error {
-	formattedValue, isVolume, err := getVolumeOrWeightFromName(name)
-
-	if err != nil {
-		return err
-	}
-	if isVolume {
-		s.Volume = strconv.FormatFloat(formattedValue, 'f', 3, 64)
-	} else {
-		s.Weight = strconv.FormatFloat(formattedValue, 'f', 3, 64)
-	}
-	return nil
 }
 
 func getVolumeOrWeightFromName(name string) (float64, bool, error) {
@@ -70,7 +57,7 @@ func getVolumeOrWeightFromName(name string) (float64, bool, error) {
 	gramsRegex := regexp.MustCompile(regexps.GramsRegex)
 
 	grams := gramsRegex.FindString(name)
-	if grams!= "" {
+	if grams != "" {
 		cleaned := strings.Join(cleanDecimalRegex.FindAllString(grams, -1), "")
 		value, err := strconv.ParseFloat(cleaned, 64)
 		if err != nil {
@@ -93,7 +80,7 @@ func getVolumeOrWeightFromName(name string) (float64, bool, error) {
 
 	volumeRegex := regexp.MustCompile(regexps.VolumeMilliliterRegex)
 	volume := volumeRegex.FindString(name)
-	if  volume != "" {
+	if volume != "" {
 		cleaned := strings.Join(cleanDecimalRegex.FindAllString(volume, -1), "")
 		value, err := strconv.ParseFloat(cleaned, 64)
 		if err != nil {
@@ -105,7 +92,7 @@ func getVolumeOrWeightFromName(name string) (float64, bool, error) {
 
 	volumeRegex = regexp.MustCompile(regexps.VolumeLiterRegex)
 	volume = volumeRegex.FindString(name)
-	if  volume != "" {
+	if volume != "" {
 		cleaned := strings.Join(cleanDecimalRegex.FindAllString(volume, -1), "")
 		value, err := strconv.ParseFloat(cleaned, 64)
 		if err != nil {

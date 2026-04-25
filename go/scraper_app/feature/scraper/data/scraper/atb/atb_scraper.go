@@ -5,11 +5,12 @@ import (
 	"log"
 	"math"
 	"regexp"
+	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/cache"
+	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/page"
+	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/parse"
+	"sales_monitor/scraper_app/feature/scraper/data/scraper/model"
 	"sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
-	"sales_monitor/scraper_app/feature/scraper/service/dto"
-	"sales_monitor/scraper_app/feature/scraper/utils"
-
 	"strconv"
 	"strings"
 
@@ -25,35 +26,35 @@ func (s *AtbScraper) GetMarketplaceName() string {
 	return "АТБ"
 }
 
-func (s *AtbScraper) Scrape(url string, cachedProducts *entity.LaterScrapedProducts) *dto.ScrapeResult {
-	page, err := utils.OpenPage(s.Browser)
+func (s *AtbScraper) Scrape(url string, cachedProducts *entity.LaterScrapedProducts, wordsToIgnore []string) *entity.ScrapeResult {
+	p, err := page.Open(s.Browser)
 	if err != nil {
 		log.Fatalf("could not create page: %v", err)
 	}
-	page.Goto(url)
-	page.WaitForLoadState()
+	p.Goto(url)
+	p.WaitForLoadState()
 
-	countOfAllPages := s.getCountOfAllPages(page)
+	countOfAllPages := s.getCountOfAllPages(p)
 
-	var products []*dto.ScrapedProductDto
+	var products []*model.ScrapedProduct
 
 	for i := 1; i < countOfAllPages; i++ {
-		products = append(products, s.getProducts(page)...)
-		page.Close()
+		products = append(products, s.getProducts(p)...)
+		p.Close()
 
-		page, err = utils.OpenPage(s.Browser)
+		p, err = page.Open(s.Browser)
 		if err != nil {
 			log.Fatalf("could not create page: %v", err)
 		}
 		url := fmt.Sprintf("%s?page=%d", url, i+1)
-		page.Goto(url)
-		page.WaitForLoadState()
+		p.Goto(url)
+		p.WaitForLoadState()
 	}
 
-	products = append(products, s.getProducts(page)...)
-	page.Close()
+	products = append(products, s.getProducts(p)...)
+	p.Close()
 
-	productsWithBrand := []*dto.ScrapedProductDto{}
+	productsWithBrand := []*model.ScrapedProduct{}
 	newCount := 0
 	for _, product := range products {
 		inCache := false
@@ -61,24 +62,24 @@ func (s *AtbScraper) Scrape(url string, cachedProducts *entity.LaterScrapedProdu
 			cachedProduct, ok := (*cachedProducts)[product.URL]
 			if ok {
 				inCache = true
-				if utils.CheckForProductUpdate(&cachedProduct, product) {
+				if cache.IsUpToDate(&cachedProduct, product) {
 					continue
 				}
 			}
 		}
 
 		(func() {
-			page, err = utils.OpenPage(s.Browser)
+			p, err = page.Open(s.Browser)
 			if err != nil {
 				log.Fatalf("could not create page: %v", err)
 			}
-			defer page.Close()
-			page.Goto(product.URL)
-			page.WaitForLoadState()
+			defer p.Close()
+			p.Goto(product.URL)
+			p.WaitForLoadState()
 
-			product, err = s.getProductDetails(page, product)
+			product, err = s.getProductDetails(p, product)
 			if err != nil {
-				s.logErr(page, err, gateway.ErrorContext{Context: "atb_product_details", URL: product.URL})
+				s.logErr(p, err, gateway.ErrorContext{Context: "atb_product_details", URL: product.URL})
 				log.Printf("could not get product brand: %v", err)
 				return
 			}
@@ -89,18 +90,18 @@ func (s *AtbScraper) Scrape(url string, cachedProducts *entity.LaterScrapedProdu
 		})()
 	}
 
-	return &dto.ScrapeResult{
-		Products:   productsWithBrand,
+	return &entity.ScrapeResult{
+		Products:   parse.ToEntityProducts(productsWithBrand, wordsToIgnore),
 		FoundCount: len(products),
 		NewCount:   newCount,
 	}
 }
 
-func (s *AtbScraper) getCountOfAllPages(page playwright.Page) int {
-	countElement := page.Locator(".product-search-count-bottom")
+func (s *AtbScraper) getCountOfAllPages(p playwright.Page) int {
+	countElement := p.Locator(".product-search-count-bottom")
 	countText, err := countElement.InnerText()
 	if err != nil {
-		s.logErr(page, err, gateway.ErrorContext{Context: "atb_get_count"})
+		s.logErr(p, err, gateway.ErrorContext{Context: "atb_get_count"})
 		log.Printf("could not get count of all products: %v", err)
 		return 0
 	}
@@ -108,7 +109,7 @@ func (s *AtbScraper) getCountOfAllPages(page playwright.Page) int {
 	re := regexp.MustCompile(`\d+`)
 	matches := re.FindAllString(countText, 2)
 	if len(matches) != 2 {
-		s.logErr(page, fmt.Errorf("expected 2 matches, got %d", len(matches)), gateway.ErrorContext{Context: "atb_parse_count"})
+		s.logErr(p, fmt.Errorf("expected 2 matches, got %d", len(matches)), gateway.ErrorContext{Context: "atb_parse_count"})
 		log.Printf("could not get count of all products: matches=%d", len(matches))
 		return 0
 	}
@@ -116,19 +117,19 @@ func (s *AtbScraper) getCountOfAllPages(page playwright.Page) int {
 	countAll, err1 := strconv.ParseFloat(matches[1], 64)
 	countPerPage, err2 := strconv.ParseFloat(matches[0], 64)
 	if err1 != nil || err2 != nil || countPerPage == 0 {
-		s.logErr(page, err1, gateway.ErrorContext{Context: "atb_convert_count"})
+		s.logErr(p, err1, gateway.ErrorContext{Context: "atb_convert_count"})
 		log.Printf("could not convert product counts to int: %v, %v", err1, err2)
 		return 0
 	}
 	return int(math.Ceil(float64(countAll) / float64(countPerPage)))
 }
 
-func (s *AtbScraper) getProducts(page playwright.Page) []*dto.ScrapedProductDto {
-	products := []*dto.ScrapedProductDto{}
+func (s *AtbScraper) getProducts(p playwright.Page) []*model.ScrapedProduct {
+	products := []*model.ScrapedProduct{}
 
-	items, ok := page.Locator(".catalog-item").All()
+	items, ok := p.Locator(".catalog-item").All()
 	if ok != nil {
-		s.logErr(page, ok, gateway.ErrorContext{Context: "atb_catalog_items"})
+		s.logErr(p, ok, gateway.ErrorContext{Context: "atb_catalog_items"})
 		log.Fatalf("could not get catalog items: %v", ok)
 	}
 
@@ -137,14 +138,14 @@ func (s *AtbScraper) getProducts(page playwright.Page) []*dto.ScrapedProductDto 
 
 		productLink, err := item.Locator(".catalog-item__photo-link").GetAttribute("href")
 		if err != nil {
-			s.logErr(page, err, gateway.ErrorContext{Context: "atb_product_link_index", Index: index})
+			s.logErr(p, err, gateway.ErrorContext{Context: "atb_product_link_index", Index: index})
 			log.Printf("could not get product link: %v", err)
 		}
 
 		currentPriceElement := pricesBloc.Locator(".product-price__top").First()
 		currentPriceText, err := currentPriceElement.GetAttribute("value")
 		if err != nil {
-			s.logErr(page, err, gateway.ErrorContext{Context: "atb_current_price", URL: productLink, Index: index})
+			s.logErr(p, err, gateway.ErrorContext{Context: "atb_current_price", URL: productLink, Index: index})
 			log.Printf("could not get current price: %v", err)
 			continue
 		}
@@ -162,7 +163,7 @@ func (s *AtbScraper) getProducts(page playwright.Page) []*dto.ScrapedProductDto 
 		titleElement := item.Locator(".catalog-item__title")
 		title, err := titleElement.InnerText()
 		if err != nil {
-			s.logErr(page, err, gateway.ErrorContext{Context: "atb_title", Index: index, URL: productLink})
+			s.logErr(p, err, gateway.ErrorContext{Context: "atb_title", Index: index, URL: productLink})
 			log.Printf("could not get title, skipping item: %v", err)
 			continue
 		}
@@ -170,12 +171,12 @@ func (s *AtbScraper) getProducts(page playwright.Page) []*dto.ScrapedProductDto 
 		imgElement := item.Locator(".catalog-item__img")
 		imgSrc, err := imgElement.GetAttribute("src")
 		if err != nil {
-			s.logErr(page, err, gateway.ErrorContext{Context: "atb_image_src", Index: index, URL: productLink})
+			s.logErr(p, err, gateway.ErrorContext{Context: "atb_image_src", Index: index, URL: productLink})
 			log.Printf("could not get image src: %v", err)
 			imgSrc = ""
 		}
 
-		product := dto.CreateScrapedProductDto(
+		product := parse.NewScrapedProduct(
 			strings.TrimSpace(title),
 			oldPrice,
 			currentPrice,
@@ -184,16 +185,15 @@ func (s *AtbScraper) getProducts(page playwright.Page) []*dto.ScrapedProductDto 
 		)
 
 		products = append(products, product)
-
 	}
 
 	return products
 }
 
-func (s *AtbScraper) getProductDetails(page playwright.Page, product *dto.ScrapedProductDto) (*dto.ScrapedProductDto, error) {
-	brandElement, err := page.Locator(".product-characteristics__item").All()
+func (s *AtbScraper) getProductDetails(p playwright.Page, product *model.ScrapedProduct) (*model.ScrapedProduct, error) {
+	brandElement, err := p.Locator(".product-characteristics__item").All()
 	if err != nil {
-		s.logErr(page, err, gateway.ErrorContext{Context: "atb_brand_elements", URL: product.URL})
+		s.logErr(p, err, gateway.ErrorContext{Context: "atb_brand_elements", URL: product.URL})
 		log.Printf("could not get brand: %v", err)
 		return nil, err
 	}
@@ -204,9 +204,9 @@ func (s *AtbScraper) getProductDetails(page playwright.Page, product *dto.Scrape
 		}
 
 		if elementTitle == "Торгова марка" {
-			brandName, err := s.getProductAttributeValue(page, item, product.URL)
+			brandName, err := s.getProductAttributeValue(p, item, product.URL)
 			if err != nil {
-				s.logErr(page, err, gateway.ErrorContext{Context: "atb_brand_name", URL: product.URL})
+				s.logErr(p, err, gateway.ErrorContext{Context: "atb_brand_name", URL: product.URL})
 				log.Printf("could not get brand name: %v", err)
 				return nil, err
 			}
@@ -214,38 +214,38 @@ func (s *AtbScraper) getProductDetails(page playwright.Page, product *dto.Scrape
 		}
 
 		if elementTitle == "Об’єм" {
-			volume, err := s.getProductAttributeValue(page, item, product.URL)
+			volume, err := s.getProductAttributeValue(p, item, product.URL)
 			if err == nil {
-				product.ScraperSetVolumeOrWeight(volume)
+				parse.SetVolumeOrWeight(product, volume)
 			}
 		}
 
 		if elementTitle == "Вага" {
-			weight, err := s.getProductAttributeValue(page, item, product.URL)
+			weight, err := s.getProductAttributeValue(p, item, product.URL)
 			if err == nil {
-				product.ScraperSetVolumeOrWeight(weight)
+				parse.SetVolumeOrWeight(product, weight)
 			}
 		}
 	}
 	return product, nil
 }
 
-func (s *AtbScraper) getProductAttributeValue(page playwright.Page, item playwright.Locator, url string) (string, error) {
+func (s *AtbScraper) getProductAttributeValue(p playwright.Page, item playwright.Locator, url string) (string, error) {
 	volumeElement, err := item.Locator(".product-characteristics__value").InnerText()
 	if err != nil {
-		s.logErr(page, err, gateway.ErrorContext{Context: "atb_attribute_value", URL: url})
+		s.logErr(p, err, gateway.ErrorContext{Context: "atb_attribute_value", URL: url})
 		log.Printf("could not get volume: %v", err)
 		return "", err
 	}
 	return volumeElement, nil
 }
 
-func (s *AtbScraper) logErr(page playwright.Page, err error, ctx gateway.ErrorContext) {
+func (s *AtbScraper) logErr(p playwright.Page, err error, ctx gateway.ErrorContext) {
 	path := s.ErrorLogger.LogError(err, ctx)
-	if path == "" || page == nil {
+	if path == "" || p == nil {
 		return
 	}
-	page.Screenshot(playwright.PageScreenshotOptions{
+	p.Screenshot(playwright.PageScreenshotOptions{
 		Path:     playwright.String(path),
 		FullPage: playwright.Bool(true),
 	})
