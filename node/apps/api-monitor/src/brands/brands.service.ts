@@ -1,46 +1,29 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager } from '@mikro-orm/core';
-import { Brand } from '@sales-monitor/database';
+import { Injectable } from '@nestjs/common';
+import { createPaginationMeta } from '@sales-monitor/common';
+import { BrandsRepository } from './brands.repository';
+import { BrandDomain } from './domain/brand.domain';
+import { ProductDomain } from '../products/domain/product.domain';
 
 @Injectable()
 export class BrandsService {
-  constructor(private readonly em: EntityManager) {}
+  constructor(private readonly brandsRepository: BrandsRepository) {}
 
-  async findAll() {
-    return this.em.find(Brand, {}, { orderBy: { name: 'ASC' } });
+  async findAll(): Promise<BrandDomain[]> {
+    return this.brandsRepository.findAll();
   }
 
-  async findOne(id: number) {
-    const brand = await this.em.findOne(Brand, { brandId: id });
-    if (!brand) {
-      throw new NotFoundException(`Brand with ID ${id} not found`);
-    }
-    return brand;
+  async findOne(id: number): Promise<BrandDomain> {
+    return this.brandsRepository.findOne(id);
   }
 
   async getBrandProducts(brandId: number, page = 1, limit = 20) {
-    const brand = await this.em.findOne(
-      Brand,
-      { brandId },
-      { populate: ['products.category'] },
-    );
-
-    if (!brand) {
-      throw new NotFoundException(`Brand with ID ${brandId} not found`);
-    }
-
-    const products = brand.products.getItems();
+    const products = await this.brandsRepository.findProducts(brandId);
     const total = products.length;
-    const paginatedProducts = products.slice((page - 1) * limit, page * limit);
+    const data: ProductDomain[] = products.slice((page - 1) * limit, page * limit);
 
     return {
-      data: paginatedProducts,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      data,
+      meta: createPaginationMeta(page, limit, total),
     };
   }
 }

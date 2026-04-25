@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { ForbiddenError } from '../../common/errors';
 
 @Injectable()
 export class RegisteredUserGuard implements CanActivate {
@@ -12,7 +8,7 @@ export class RegisteredUserGuard implements CanActivate {
     const user = request.user;
 
     if (!user || user.isGuest) {
-      throw new ForbiddenException('This action requires a registered account');
+      throw new ForbiddenError('This action requires a registered account');
     }
 
     return true;

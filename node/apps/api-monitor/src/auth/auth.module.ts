@@ -5,8 +5,10 @@ import { PassportModule } from '@nestjs/passport';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { User } from '@sales-monitor/database';
 import { JWT_EXPIRATION } from '@sales-monitor/common';
+import { UsersModule } from '../users/users.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { AuthRepository } from './auth.repository';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -19,9 +21,11 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
       signOptions: { expiresIn: JWT_EXPIRATION },
     }),
     MikroOrmModule.forFeature([User]),
+    UsersModule,
   ],
   providers: [
     AuthService,
+    AuthRepository,
     JwtStrategy,
     LocalStrategy,
     {

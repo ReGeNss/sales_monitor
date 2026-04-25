@@ -1,104 +1,37 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager } from '@mikro-orm/core';
-import { User, Product, Brand } from '@sales-monitor/database';
+import { Injectable } from '@nestjs/common';
+import { FavoritesRepository } from './favorites.repository';
+import { ProductDomain } from '../products/domain/product.domain';
+import { BrandDomain } from '../brands/domain/brand.domain';
 
 @Injectable()
 export class FavoritesService {
-  constructor(private readonly em: EntityManager) {}
+  constructor(private readonly favoritesRepository: FavoritesRepository) {}
 
-  async getFavoriteProducts(userId: number) {
-    const user = await this.em.findOne(
-      User,
-      { userId },
-      { populate: ['favoriteProducts.brand', 'favoriteProducts.category'] },
-    );
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return user.favoriteProducts.getItems();
+  async getFavoriteProducts(userId: number): Promise<ProductDomain[]> {
+    return this.favoritesRepository.getFavoriteProducts(userId);
   }
 
   async addFavoriteProduct(userId: number, productId: number) {
-    const user = await this.em.findOne(User, { userId }, { populate: ['favoriteProducts'] });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const product = await this.em.findOne(Product, { productId });
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
-
-    if (!user.favoriteProducts.contains(product)) {
-      user.favoriteProducts.add(product);
-      await this.em.flush();
-    }
-
+    await this.favoritesRepository.addFavoriteProduct(userId, productId);
     return { message: 'Product added to favorites' };
   }
 
   async removeFavoriteProduct(userId: number, productId: number) {
-    const user = await this.em.findOne(User, { userId }, { populate: ['favoriteProducts'] });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const product = await this.em.findOne(Product, { productId });
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
-
-    user.favoriteProducts.remove(product);
-    await this.em.flush();
-
+    await this.favoritesRepository.removeFavoriteProduct(userId, productId);
     return { message: 'Product removed from favorites' };
   }
 
-  async getFavoriteBrands(userId: number) {
-    const user = await this.em.findOne(User, { userId }, { populate: ['favoriteBrands'] });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return user.favoriteBrands.getItems();
+  async getFavoriteBrands(userId: number): Promise<BrandDomain[]> {
+    return this.favoritesRepository.getFavoriteBrands(userId);
   }
 
   async addFavoriteBrand(userId: number, brandId: number) {
-    const user = await this.em.findOne(User, { userId }, { populate: ['favoriteBrands'] });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const brand = await this.em.findOne(Brand, { brandId });
-    if (!brand) {
-      throw new NotFoundException('Brand not found');
-    }
-
-    if (!user.favoriteBrands.contains(brand)) {
-      user.favoriteBrands.add(brand);
-      await this.em.flush();
-    }
-
+    await this.favoritesRepository.addFavoriteBrand(userId, brandId);
     return { message: 'Brand added to favorites' };
   }
 
   async removeFavoriteBrand(userId: number, brandId: number) {
-    const user = await this.em.findOne(User, { userId }, { populate: ['favoriteBrands'] });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const brand = await this.em.findOne(Brand, { brandId });
-    if (!brand) {
-      throw new NotFoundException('Brand not found');
-    }
-
-    user.favoriteBrands.remove(brand);
-    await this.em.flush();
-
+    await this.favoritesRepository.removeFavoriteBrand(userId, brandId);
     return { message: 'Brand removed from favorites' };
   }
 }

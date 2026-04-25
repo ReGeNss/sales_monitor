@@ -1,30 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager } from '@mikro-orm/core';
-import { User } from '@sales-monitor/database';
+import { Injectable } from '@nestjs/common';
+import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly em: EntityManager) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
   async updateNotificationToken(userId: number, nfToken?: string) {
-    const user = await this.em.findOne(User, { userId });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    user.nfToken = nfToken;
-    await this.em.flush();
-
+    await this.usersRepository.updateNotificationToken(userId, nfToken);
     return { message: 'Notification token updated successfully' };
   }
 
   async deleteAccount(userId: number) {
-    const user = await this.em.findOne(User, { userId });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    await this.em.removeAndFlush(user);
+    await this.usersRepository.delete(userId);
     return { message: 'Account deleted successfully' };
   }
 }

@@ -1,46 +1,29 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager } from '@mikro-orm/core';
-import { Category } from '@sales-monitor/database';
+import { Injectable } from '@nestjs/common';
+import { createPaginationMeta } from '@sales-monitor/common';
+import { CategoriesRepository } from './categories.repository';
+import { CategoryDomain } from './domain/category.domain';
+import { ProductDomain } from '../products/domain/product.domain';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly em: EntityManager) {}
+  constructor(private readonly categoriesRepository: CategoriesRepository) {}
 
-  async findAll() {
-    return this.em.find(Category, {}, { orderBy: { name: 'ASC' } });
+  async findAll(): Promise<CategoryDomain[]> {
+    return this.categoriesRepository.findAll();
   }
 
-  async findOne(id: number) {
-    const category = await this.em.findOne(Category, { categoryId: id });
-    if (!category) {
-      throw new NotFoundException(`Category with ID ${id} not found`);
-    }
-    return category;
+  async findOne(id: number): Promise<CategoryDomain> {
+    return this.categoriesRepository.findOne(id);
   }
 
   async getCategoryProducts(categoryId: number, page = 1, limit = 20) {
-    const category = await this.em.findOne(
-      Category,
-      { categoryId },
-      { populate: ['products.brand'] },
-    );
-
-    if (!category) {
-      throw new NotFoundException(`Category with ID ${categoryId} not found`);
-    }
-
-    const products = category.products.getItems();
+    const products = await this.categoriesRepository.findProducts(categoryId);
     const total = products.length;
-    const paginatedProducts = products.slice((page - 1) * limit, page * limit);
+    const data: ProductDomain[] = products.slice((page - 1) * limit, page * limit);
 
     return {
-      data: paginatedProducts,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      data,
+      meta: createPaginationMeta(page, limit, total),
     };
   }
 }

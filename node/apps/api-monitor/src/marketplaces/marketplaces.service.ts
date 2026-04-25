@@ -1,20 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager } from '@mikro-orm/core';
-import { Marketplace } from '@sales-monitor/database';
+import { Injectable } from '@nestjs/common';
+import { MarketplacesRepository } from './marketplaces.repository';
+import { MarketplaceDomain } from './domain/marketplace.domain';
 
 @Injectable()
 export class MarketplacesService {
-  constructor(private readonly em: EntityManager) {}
+  constructor(private readonly marketplacesRepository: MarketplacesRepository) {}
 
-  async findAll() {
-    return this.em.find(Marketplace, {}, { orderBy: { name: 'ASC' } });
+  async findAll(): Promise<MarketplaceDomain[]> {
+    return this.marketplacesRepository.findAll();
   }
 
-  async findOne(id: number) {
-    const marketplace = await this.em.findOne(Marketplace, { marketplaceId: id });
-    if (!marketplace) {
-      throw new NotFoundException(`Marketplace with ID ${id} not found`);
-    }
-    return marketplace;
+  async findOne(id: number): Promise<MarketplaceDomain> {
+    return this.marketplacesRepository.findOne(id);
   }
 }
