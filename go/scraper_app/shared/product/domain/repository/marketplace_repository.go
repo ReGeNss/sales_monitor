@@ -1,11 +1,14 @@
 package repository
 
-import "sales_monitor/scraper_app/shared/product/domain/entity"
+import (
+	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
+)
 
 type MarketplaceRepository interface {
-	GetMarketplaceByName(name string) (*entity.Marketplace, error)
-	CreateMarketplace(marketplace *entity.Marketplace) (uint, error)
-	GetLaterScrapedProducts(brandID int) (entity.LaterScrapedProductsUrls, error)
-	AddPriceToMarketplaceProduct(productID int, marketplaceID int, url string, regularPrice float64, specialPrice *float64) error
-	AddPriceToMarketplaceProductID(marketplaceProductID int, regularPrice float64, specialPrice *float64) error
+	GetMarketplaceByName(name string) (*entity.Marketplace, exception.IDomainError)
+	CreateMarketplace(marketplace *entity.Marketplace) (uint, exception.IDomainError)
+	GetLaterScrapedProducts(brandID int) (entity.LaterScrapedProductsUrls, exception.IDomainError)
+	AddPriceToMarketplaceProduct(productID int, marketplaceID int, url string, regularPrice float64, specialPrice *float64) exception.IDomainError
+	AddPriceToMarketplaceProductID(marketplaceProductID int, regularPrice float64, specialPrice *float64) exception.IDomainError
 }

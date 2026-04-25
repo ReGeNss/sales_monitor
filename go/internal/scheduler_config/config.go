@@ -87,4 +87,3 @@ func (c *Config) FindJob(jobID string) (*ResolvedJob, error) {
 	}
 	return nil, fmt.Errorf("job %q not found", jobID)
 }
-

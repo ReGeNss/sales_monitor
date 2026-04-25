@@ -4,6 +4,7 @@ import (
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/shared/product/data/mapper"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 
 	"gorm.io/gorm"
@@ -17,7 +18,7 @@ func NewMarketplaceRepository(db *gorm.DB) repository.MarketplaceRepository {
 	return &marketplaceRepositoryImpl{db: db}
 }
 
-func (r *marketplaceRepositoryImpl) GetMarketplaceByName(name string) (*entity.Marketplace, error) {
+func (r *marketplaceRepositoryImpl) GetMarketplaceByName(name string) (*entity.Marketplace, exception.IDomainError) {
 	var marketplace models.Marketplace
 	err := r.db.Model(&models.Marketplace{}).Where("name = ?", name).First(&marketplace).Error
 	if err != nil {
@@ -26,7 +27,7 @@ func (r *marketplaceRepositoryImpl) GetMarketplaceByName(name string) (*entity.M
 	return mapper.MarketplaceToEntity(&marketplace), nil
 }
 
-func (r *marketplaceRepositoryImpl) CreateMarketplace(marketplace *entity.Marketplace) (uint, error) {
+func (r *marketplaceRepositoryImpl) CreateMarketplace(marketplace *entity.Marketplace) (uint, exception.IDomainError) {
 	m := mapper.MarketplaceToModel(marketplace)
 	if err := r.db.Model(&models.Marketplace{}).Create(m).Error; err != nil {
 		return 0, err
@@ -35,7 +36,7 @@ func (r *marketplaceRepositoryImpl) CreateMarketplace(marketplace *entity.Market
 	return uint(m.MarketplaceID), nil
 }
 
-func (r *marketplaceRepositoryImpl) GetLaterScrapedProducts(brandID int) (entity.LaterScrapedProductsUrls, error) {
+func (r *marketplaceRepositoryImpl) GetLaterScrapedProducts(brandID int) (entity.LaterScrapedProductsUrls, exception.IDomainError) {
 	var marketplaceProducts []models.MarketplaceProduct
 	err := r.db.Model(&models.MarketplaceProduct{}).Table("marketplace_products as mp").
 		Joins("JOIN products p ON p.product_id = mp.product_id").
@@ -52,7 +53,7 @@ func (r *marketplaceRepositoryImpl) GetLaterScrapedProducts(brandID int) (entity
 	return urls, nil
 }
 
-func (r *marketplaceRepositoryImpl) AddPriceToMarketplaceProduct(productID int, marketplaceID int, url string, regularPrice float64, specialPrice *float64) error {
+func (r *marketplaceRepositoryImpl) AddPriceToMarketplaceProduct(productID int, marketplaceID int, url string, regularPrice float64, specialPrice *float64) exception.IDomainError {
 	marketplaceProduct := models.MarketplaceProduct{
 		MarketplaceID: marketplaceID,
 		ProductID:     productID,
@@ -74,7 +75,7 @@ func (r *marketplaceRepositoryImpl) AddPriceToMarketplaceProduct(productID int, 
 	return r.db.Model(&models.Price{}).Create(&price).Error
 }
 
-func (r *marketplaceRepositoryImpl) AddPriceToMarketplaceProductID(marketplaceProductID int, regularPrice float64, specialPrice *float64) error {
+func (r *marketplaceRepositoryImpl) AddPriceToMarketplaceProductID(marketplaceProductID int, regularPrice float64, specialPrice *float64) exception.IDomainError {
 	price := models.Price{
 		MarketplaceProductID: marketplaceProductID,
 		RegularPrice:         regularPrice,

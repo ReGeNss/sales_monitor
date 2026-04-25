@@ -31,7 +31,7 @@ func main() {
 		log.Fatalf("Error scraping products: %v", err)
 	}
 }
-	
+
 func loadEnv() {
 	if err := godotenv.Load("../../.env"); err != nil {
 		log.Printf("Warning: .env file not loaded: %v", err)
@@ -66,8 +66,8 @@ func buildPlan(job *config.ResolvedJob) scraper.ScrapingPlan {
 				ProductDifferentiationEntity: differentiation,
 				ScrapersConfigs: []scraper.ScraperConfig{
 					{
-						URLs:    job.URLs,
-						ShopID:  job.ShopID,
+						URLs:   job.URLs,
+						ShopID: job.ShopID,
 					},
 				},
 			},

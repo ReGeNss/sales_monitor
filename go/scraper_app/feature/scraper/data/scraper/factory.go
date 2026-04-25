@@ -1,11 +1,11 @@
 package scraper
 
 import (
-	"fmt"
 	"log"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/atb"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/fora"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/silpo"
+	"sales_monitor/scraper_app/feature/scraper/domain/exception"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 
 	"github.com/playwright-community/playwright-go"
@@ -23,10 +23,10 @@ type playwrightScraperFactory struct {
 	errorLogger gateway.ErrorLogger
 }
 
-func NewScraperFactory(errorLogger gateway.ErrorLogger) (gateway.ScraperFactory, error) {
+func NewScraperFactory(errorLogger gateway.ErrorLogger) (gateway.ScraperFactory, exception.IDomainError) {
 	pw, err := playwright.Run()
 	if err != nil {
-		return nil, fmt.Errorf("could not start playwright: %w", err)
+		return nil, exception.NewDomainError("couldn't start scraper: " + err.Error())
 	}
 
 	browser, err := pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
@@ -38,7 +38,7 @@ func NewScraperFactory(errorLogger gateway.ErrorLogger) (gateway.ScraperFactory,
 	})
 	if err != nil {
 		pw.Stop()
-		return nil, fmt.Errorf("could not launch browser: %w", err)
+		return nil, exception.NewDomainError("couldn't start browser: " + err.Error())
 	}
 
 	return &playwrightScraperFactory{
@@ -48,7 +48,7 @@ func NewScraperFactory(errorLogger gateway.ErrorLogger) (gateway.ScraperFactory,
 	}, nil
 }
 
-func (f *playwrightScraperFactory) Get(shopID string) (gateway.Scraper, error) {
+func (f *playwrightScraperFactory) Get(shopID string) (gateway.Scraper, exception.IDomainError) {
 	switch shopID {
 	case ATB:
 		return &atb.AtbScraper{Browser: f.browser, ErrorLogger: f.errorLogger}, nil
@@ -57,7 +57,7 @@ func (f *playwrightScraperFactory) Get(shopID string) (gateway.Scraper, error) {
 	case SILPO:
 		return &silpo.SilpoScraper{Browser: f.browser, ErrorLogger: f.errorLogger}, nil
 	default:
-		return nil, fmt.Errorf("unknown shop_id %q", shopID)
+		return nil, exception.NewDomainError("Unknown shop id: " + shopID)
 	}
 }
 

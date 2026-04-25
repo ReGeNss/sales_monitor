@@ -4,6 +4,7 @@ import (
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/shared/product/data/mapper"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 
 	"gorm.io/gorm"
@@ -17,7 +18,7 @@ func NewPriceRepository(db *gorm.DB) repository.PriceRepository {
 	return &priceRepositoryImpl{db: db}
 }
 
-func (r *priceRepositoryImpl) GetLatestProductPrice(productID int) (*entity.Price, error) {
+func (r *priceRepositoryImpl) GetLatestProductPrice(productID int) (*entity.Price, exception.IDomainError) {
 	var price models.Price
 	err := r.db.Model(&models.Price{}).
 		Joins("JOIN marketplace_products mp ON mp.marketplace_product_id = prices.marketplace_product_id").

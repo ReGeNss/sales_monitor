@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 )
 
@@ -14,7 +15,7 @@ type RecordPriceInput struct {
 }
 
 type RecordPriceUseCase interface {
-	Execute(input RecordPriceInput) (priceDrop *entity.Product, err error)
+	Execute(input RecordPriceInput) (priceDrop *entity.Product, err exception.IDomainError)
 }
 
 type recordPriceUseCase struct {
@@ -32,7 +33,7 @@ func NewRecordPriceUseCase(
 	}
 }
 
-func (u *recordPriceUseCase) Execute(input RecordPriceInput) (*entity.Product, error) {
+func (u *recordPriceUseCase) Execute(input RecordPriceInput) (*entity.Product, exception.IDomainError) {
 	if marketplaceProductID, ok := input.KnownMarketplaceURLs[input.Scraped.URL]; ok {
 		u.marketplaceRepository.AddPriceToMarketplaceProductID(
 			marketplaceProductID,

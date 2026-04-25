@@ -2,12 +2,13 @@ package usecase
 
 import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	"strings"
 )
 
 type AssignBrandsUseCase interface {
-	Execute(products []*entity.ScrapedProduct) (map[string][]*entity.ScrapedProduct, error)
+	Execute(products []*entity.ScrapedProduct) (map[string][]*entity.ScrapedProduct, exception.IDomainError)
 }
 
 type assignBrandsUseCase struct {
@@ -18,7 +19,7 @@ func NewAssignBrandsUseCase(brandRepository repository.BrandRepository) AssignBr
 	return &assignBrandsUseCase{brandRepository: brandRepository}
 }
 
-func (u *assignBrandsUseCase) Execute(products []*entity.ScrapedProduct) (map[string][]*entity.ScrapedProduct, error) {
+func (u *assignBrandsUseCase) Execute(products []*entity.ScrapedProduct) (map[string][]*entity.ScrapedProduct, exception.IDomainError) {
 	grouped, unknown := groupByBrand(products)
 
 	if len(unknown) == 0 {

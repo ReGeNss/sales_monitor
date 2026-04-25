@@ -2,11 +2,12 @@ package usecase
 
 import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 )
 
 type ResolveCategoryUseCase interface {
-	Execute(name string) (int, error)
+	Execute(name string) (int, exception.IDomainError)
 }
 
 type resolveCategoryUseCase struct {
@@ -17,7 +18,7 @@ func NewResolveCategoryUseCase(repo repository.CategoryRepository) ResolveCatego
 	return &resolveCategoryUseCase{repo: repo}
 }
 
-func (u *resolveCategoryUseCase) Execute(name string) (int, error) {
+func (u *resolveCategoryUseCase) Execute(name string) (int, exception.IDomainError) {
 	category, err := u.repo.GetCategoryByName(name)
 	if err == nil {
 		return category.ID, nil

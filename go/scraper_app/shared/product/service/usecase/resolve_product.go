@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	"sales_monitor/scraper_app/shared/product/domain/service"
 )
@@ -16,7 +17,7 @@ type ResolveProductInput struct {
 }
 
 type ResolveProductUseCase interface {
-	Execute(input ResolveProductInput) (productID int, existing *entity.Product, err error)
+	Execute(input ResolveProductInput) (productID int, existing *entity.Product, err exception.IDomainError)
 }
 
 type resolveProductUseCase struct {
@@ -28,7 +29,7 @@ func NewResolveProductUseCase(productRepository repository.ProductRepository, ma
 	return &resolveProductUseCase{productRepository: productRepository, matcher: matcher}
 }
 
-func (u *resolveProductUseCase) Execute(input ResolveProductInput) (int, *entity.Product, error) {
+func (u *resolveProductUseCase) Execute(input ResolveProductInput) (int, *entity.Product, exception.IDomainError) {
 	if existing, err := u.productRepository.GetProductByFingerprint(input.Fingerprint, input.BrandID, input.CategoryID, input.Attributes); err == nil {
 		return existing.ID, existing, nil
 	}

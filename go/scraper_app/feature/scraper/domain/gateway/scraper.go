@@ -1,6 +1,9 @@
 package gateway
 
-import "sales_monitor/scraper_app/feature/scraper/domain/entity"
+import (
+	"sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/feature/scraper/domain/exception"
+)
 
 type Scraper interface {
 	GetMarketplaceName() string
@@ -8,6 +11,6 @@ type Scraper interface {
 }
 
 type ScraperFactory interface {
-	Get(shopID string) (Scraper, error)
+	Get(shopID string) (Scraper, exception.IDomainError)
 	Close()
 }

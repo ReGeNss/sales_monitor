@@ -2,11 +2,12 @@ package usecase
 
 import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 )
 
 type ResolveBrandUseCase interface {
-	Execute(name string) (int, error)
+	Execute(name string) (int, exception.IDomainError)
 }
 
 type resolveBrandUseCase struct {
@@ -17,7 +18,7 @@ func NewResolveBrandUseCase(repo repository.BrandRepository) ResolveBrandUseCase
 	return &resolveBrandUseCase{repo: repo}
 }
 
-func (u *resolveBrandUseCase) Execute(name string) (int, error) {
+func (u *resolveBrandUseCase) Execute(name string) (int, exception.IDomainError) {
 	brand, err := u.repo.GetBrandByName(name)
 	if err == nil {
 		return brand.ID, nil

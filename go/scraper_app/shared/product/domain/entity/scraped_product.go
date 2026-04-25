@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	regexps "sales_monitor/scraper_app/core/regexp"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -38,19 +39,19 @@ func NewScrapedProduct(
 ) (*ScrapedProduct, error) {
 	var validName = strings.TrimSpace(name)
 	if validName == "" {
-		return nil, nil // TODO: create domain error
+		return nil, exception.NewDomainError("Name is empty")
 	}
 
 	validName = replaceIgnoredWords(validName, wordsToIgnore)
-	
+
 	var validBrandName = strings.TrimSpace(brandName)
 	if validBrandName == "" {
-		return nil, nil // TODO: create domain error
+		return nil, exception.NewDomainError("Brand is empty")
 	}
 
 	var validUrl = strings.TrimSpace(url)
 	if validUrl == "" {
-		return nil, nil // TODO: create domain error
+		return nil, exception.NewDomainError("url is empty")
 	}
 
 	return &ScrapedProduct{
@@ -71,7 +72,7 @@ func (s *ScrapedProduct) GetFingerprint(wordsToIgnore []string) *string {
 
 	gramsRegex := regexp.MustCompile(regexps.GramsRegex)
 	gramsFormatted := gramsRegex.ReplaceAllString(loweredName, "")
-	
+
 	kilogramRegex := regexp.MustCompile(regexps.KilogramRegex)
 	kilogramFormatted := kilogramRegex.ReplaceAllString(gramsFormatted, "")
 
@@ -85,7 +86,7 @@ func (s *ScrapedProduct) GetFingerprint(wordsToIgnore []string) *string {
 
 	specialCharactersRegex := regexp.MustCompile(`[^\p{L}\p{N}\s]`)
 	cleanedSpecialCharacters := specialCharactersRegex.ReplaceAllString(cleaned, "")
-	
+
 	words := strings.Fields(cleanedSpecialCharacters)
 
 	deletedSmallWords := []string{}
@@ -100,7 +101,7 @@ func (s *ScrapedProduct) GetFingerprint(wordsToIgnore []string) *string {
 	})
 
 	normalizedName := strings.Join(deletedSmallWords, " ")
-	
+
 	if normalizedName == "" {
 		return nil
 	}
@@ -109,10 +110,10 @@ func (s *ScrapedProduct) GetFingerprint(wordsToIgnore []string) *string {
 }
 
 func replaceIgnoredWords(title string, wordsToIgnore []string) string {
-    pattern := fmt.Sprintf("(?i)(%s)", strings.Join(wordsToIgnore, "|")) 
-    re := regexp.MustCompile(pattern)
-    
-    result := re.ReplaceAllString(title, "")
-    
-    return result
+	pattern := fmt.Sprintf("(?i)(%s)", strings.Join(wordsToIgnore, "|"))
+	re := regexp.MustCompile(pattern)
+
+	result := re.ReplaceAllString(title, "")
+
+	return result
 }

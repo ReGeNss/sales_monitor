@@ -5,6 +5,7 @@ import (
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/shared/product/data/mapper"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 
 	"gorm.io/gorm"
@@ -18,7 +19,7 @@ func NewProductRepository(db *gorm.DB) repository.ProductRepository {
 	return &productRepositoryImpl{db: db}
 }
 
-func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint *string, brandID int, categoryID int, attributes []*entity.ProductAttribute) (*entity.Product, error) {
+func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint *string, brandID int, categoryID int, attributes []*entity.ProductAttribute) (*entity.Product, exception.IDomainError) {
 	var product models.Product
 	query := p.db.Model(&models.Product{}).Table("products as p").
 		Where("p.name_fingerprint = ? AND p.brand_id = ? AND p.category_id = ?", fingerprint, brandID, categoryID)
@@ -30,7 +31,7 @@ func (p *productRepositoryImpl) GetProductByFingerprint(fingerprint *string, bra
 	return mapper.ProductToEntity(&product), nil
 }
 
-func (p *productRepositoryImpl) FindSimilarCandidates(fingerprint *string, attributes []*entity.ProductAttribute, brandID int, categoryID int) ([]*entity.Product, error) {
+func (p *productRepositoryImpl) FindSimilarCandidates(fingerprint *string, attributes []*entity.ProductAttribute, brandID int, categoryID int) ([]*entity.Product, exception.IDomainError) {
 	query := p.db.Model(&models.Product{}).Table("products as p").
 		Select("p.product_id, p.name_fingerprint").
 		Where("category_id = ? AND brand_id = ?", categoryID, brandID)
@@ -62,7 +63,7 @@ func (p *productRepositoryImpl) FindSimilarCandidates(fingerprint *string, attri
 	return candidates, nil
 }
 
-func (p *productRepositoryImpl) CreateProduct(product *entity.Product, attributes []*entity.ProductAttribute) (uint, error) {
+func (p *productRepositoryImpl) CreateProduct(product *entity.Product, attributes []*entity.ProductAttribute) (uint, exception.IDomainError) {
 	productModel := mapper.ProductToModel(product)
 	var productAttributes []models.ProductAttribute
 
@@ -105,7 +106,7 @@ func (p *productRepositoryImpl) CreateProduct(product *entity.Product, attribute
 	return uint(productModel.ProductID), err
 }
 
-func (p *productRepositoryImpl) CreateProductAttribute(attribute *entity.ProductAttribute) error {
+func (p *productRepositoryImpl) CreateProductAttribute(attribute *entity.ProductAttribute) exception.IDomainError {
 	m := mapper.ProductAttributeToModel(attribute)
 	if err := p.db.Model(&models.ProductAttribute{}).Create(m).Error; err != nil {
 		return err

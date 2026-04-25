@@ -2,11 +2,12 @@ package usecase
 
 import (
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 )
 
 type ResolveMarketplaceUseCase interface {
-	Execute(name string) (int, error)
+	Execute(name string) (int, exception.IDomainError)
 }
 
 type resolveMarketplaceUseCase struct {
@@ -17,7 +18,7 @@ func NewResolveMarketplaceUseCase(repo repository.MarketplaceRepository) Resolve
 	return &resolveMarketplaceUseCase{repo: repo}
 }
 
-func (u *resolveMarketplaceUseCase) Execute(name string) (int, error) {
+func (u *resolveMarketplaceUseCase) Execute(name string) (int, exception.IDomainError) {
 	marketplace, err := u.repo.GetMarketplaceByName(name)
 	if err == nil {
 		return marketplace.ID, nil

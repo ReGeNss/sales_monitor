@@ -4,6 +4,7 @@ import (
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/shared/product/data/mapper"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 
 	"gorm.io/gorm"
@@ -17,7 +18,7 @@ func NewBrandRepository(db *gorm.DB) repository.BrandRepository {
 	return &brandRepositoryImpl{db: db}
 }
 
-func (r *brandRepositoryImpl) GetBrandByName(name string) (*entity.Brand, error) {
+func (r *brandRepositoryImpl) GetBrandByName(name string) (*entity.Brand, exception.IDomainError) {
 	var brand models.Brand
 	err := r.db.Model(&models.Brand{}).Where("name = ?", name).First(&brand).Error
 	if err != nil {
@@ -26,7 +27,7 @@ func (r *brandRepositoryImpl) GetBrandByName(name string) (*entity.Brand, error)
 	return mapper.BrandToEntity(&brand), nil
 }
 
-func (r *brandRepositoryImpl) GetAllBrands() ([]*entity.Brand, error) {
+func (r *brandRepositoryImpl) GetAllBrands() ([]*entity.Brand, exception.IDomainError) {
 	var brands []models.Brand
 	err := r.db.Model(&models.Brand{}).Find(&brands).Error
 	if err != nil {
@@ -35,7 +36,7 @@ func (r *brandRepositoryImpl) GetAllBrands() ([]*entity.Brand, error) {
 	return mapper.BrandsToEntities(brands), nil
 }
 
-func (r *brandRepositoryImpl) CreateBrand(brand *entity.Brand) (uint, error) {
+func (r *brandRepositoryImpl) CreateBrand(brand *entity.Brand) (uint, exception.IDomainError) {
 	m := mapper.BrandToModel(brand)
 	if err := r.db.Model(&models.Brand{}).Create(m).Error; err != nil {
 		return 0, err

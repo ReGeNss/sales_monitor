@@ -7,6 +7,7 @@ import (
 	"sales_monitor/scraper_app/core/env"
 	"sales_monitor/scraper_app/shared/product/data/mapper"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
+	"sales_monitor/scraper_app/shared/product/domain/exception"
 	domaingateway "sales_monitor/scraper_app/shared/product/domain/gateway"
 
 	"github.com/redis/go-redis/v9"
@@ -20,7 +21,7 @@ func NewNotificationPublisher(redisClient *redis.Client) domaingateway.Notificat
 	return &notificationPublisherImpl{redisClient: redisClient}
 }
 
-func (p *notificationPublisherImpl) SendNotification(notificationTask *entity.NotificationTask) error {
+func (p *notificationPublisherImpl) SendNotification(notificationTask *entity.NotificationTask) exception.IDomainError {
 	if notificationTask == nil {
 		return fmt.Errorf("notification task is nil")
 	}

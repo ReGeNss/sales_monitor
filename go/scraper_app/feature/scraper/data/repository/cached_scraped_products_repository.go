@@ -3,6 +3,7 @@ package repository
 import (
 	"sales_monitor/internal/models"
 	"sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/feature/scraper/domain/exception"
 	"sales_monitor/scraper_app/feature/scraper/domain/repository"
 
 	"gorm.io/gorm"
@@ -18,7 +19,7 @@ func NewCachedScrapedProductsRepository(db *gorm.DB) repository.CachedScrapedPro
 	}
 }
 
-func (c *cachedScrapedProductsRepositoryImpl) GetCachedScrapedProducts(marketplace string, category string) (*entity.LaterScrapedProducts, error) {
+func (c *cachedScrapedProductsRepositoryImpl) GetCachedScrapedProducts(marketplace string, category string) (*entity.LaterScrapedProducts, exception.IDomainError) {
 	var prices []models.Price
 
 	err := c.db.Transaction(func(tx *gorm.DB) error {
@@ -43,7 +44,7 @@ func (c *cachedScrapedProductsRepositoryImpl) GetCachedScrapedProducts(marketpla
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, exception.NewDomainError(err.Error())
 	}
 
 	laterScrapedProductsMap := make(map[string]entity.LaterScrapedProductPrices)

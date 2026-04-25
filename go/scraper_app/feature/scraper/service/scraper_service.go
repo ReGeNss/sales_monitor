@@ -2,15 +2,15 @@ package service
 
 import (
 	"fmt"
-	"log"
 	config "sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/feature/scraper/domain/exception"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/shared/product/service"
 )
 
 type ScraperService interface {
-	Scrape() (map[string]*config.ScrapingResult, error)
+	Scrape() (map[string]*config.ScrapingResult, exception.IDomainError)
 }
 
 type scraperServiceImpl struct {
@@ -54,14 +54,14 @@ func (t *scrapeTotals) add(other scrapeTotals) {
 	t.onSale += other.onSale
 }
 
-func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error) {
+func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, exception.IDomainError) {
 	scrapedProducts := map[string]*config.ScrapingResult{}
 	var totals scrapeTotals
 
 	for _, category := range s.configuration.Categories {
 		categoryTotals, err := s.scrapeCategory(category, scrapedProducts)
 		if err != nil {
-			return nil, err
+			return nil, exception.NewDomainError(category.Category + " scrape error")
 		}
 		totals.add(categoryTotals)
 	}
@@ -81,14 +81,14 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, error)
 func (s *scraperServiceImpl) scrapeCategory(
 	category config.ScrapingCategory,
 	out map[string]*config.ScrapingResult,
-) (scrapeTotals, error) {
+) (scrapeTotals, exception.IDomainError) {
 	var totals scrapeTotals
 
 	for _, scraperConfig := range category.ScrapersConfigs {
 		for _, url := range scraperConfig.URLs {
 			scraper, err := s.scraperFactory.Get(scraperConfig.ShopID)
 			if err != nil {
-				return totals, fmt.Errorf("get scraper for shop %s: %w", scraperConfig.ShopID, err)
+				return totals, exception.NewDomainError(fmt.Sprintf("get scraper for shop %s: %s", scraperConfig.ShopID, err))
 			}
 
 			group, urlTotals := s.scrapeURL(scraper, url, category)
@@ -108,7 +108,6 @@ func (s *scraperServiceImpl) scrapeURL(
 
 	cachedProducts, err := s.cachedScrapedProductService.GetCachedScrapedProducts(marketplaceName, category.Category)
 	if err != nil {
-		log.Printf("error getting cached scraped products: %v", err)
 		cachedProducts = nil
 	}
 
