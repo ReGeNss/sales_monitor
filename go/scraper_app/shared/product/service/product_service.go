@@ -4,9 +4,9 @@ import (
 	"log"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
-	"sales_monitor/scraper_app/shared/product/domain/gateway"
 	"sales_monitor/scraper_app/shared/product/domain/repository"
 	"sales_monitor/scraper_app/shared/product/service/usecase"
+	"sales_monitor/scraper_app/utils"
 )
 
 type ProductService interface {
@@ -21,7 +21,7 @@ type productServiceImpl struct {
 	resolveProduct        usecase.ResolveProductUseCase
 	recordPrice           usecase.RecordPriceUseCase
 	marketplaceRepository repository.MarketplaceRepository
-	notificationPublisher gateway.NotificationPublisher
+	eventBus              utils.EventBus
 }
 
 func NewProductService(
@@ -32,7 +32,7 @@ func NewProductService(
 	resolveProduct usecase.ResolveProductUseCase,
 	recordPrice usecase.RecordPriceUseCase,
 	marketplaceRepository repository.MarketplaceRepository,
-	notificationPublisher gateway.NotificationPublisher,
+	eventBus utils.EventBus,
 ) ProductService {
 	return &productServiceImpl{
 		resolveCategory:       resolveCategory,
@@ -42,7 +42,7 @@ func NewProductService(
 		resolveProduct:        resolveProduct,
 		recordPrice:           recordPrice,
 		marketplaceRepository: marketplaceRepository,
-		notificationPublisher: notificationPublisher,
+		eventBus: eventBus,
 	}
 }
 
@@ -98,13 +98,11 @@ func (s *productServiceImpl) processBrandGroups(
 		priceDrops := s.processProducts(products, categoryName, brandID, categoryID, marketplaceID, knownURLs, differentiation)
 
 		if len(priceDrops) > 0 {
-			if err := s.notificationPublisher.SendNotification(&entity.NotificationTask{
+			s.eventBus.Publish(&entity.NotificationTask{
 				BrandID:   brandID,
 				BrandName: brandName,
 				Products:  priceDrops,
-			}); err != nil {
-				log.Printf("could not send notification: %v", err)
-			}
+			})
 		}
 	}
 }

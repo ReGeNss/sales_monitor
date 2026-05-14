@@ -5,8 +5,9 @@ import (
 	config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/domain/exception"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
+	"sales_monitor/scraper_app/feature/scraper/domain/repository"
 	"sales_monitor/scraper_app/shared/product/domain/entity"
-	"sales_monitor/scraper_app/shared/product/service"
+	"sales_monitor/scraper_app/utils"
 )
 
 type ScraperService interface {
@@ -14,32 +15,23 @@ type ScraperService interface {
 }
 
 type scraperServiceImpl struct {
-	configuration               config.ScrapingPlan
-	productService              service.ProductService
-	cachedScrapedProductService CachedScrapedProductService
-	scraperFactory              gateway.ScraperFactory
-	resultStorage               gateway.ResultStorage
-	metricsPublisher            gateway.MetricsPublisher
-	errorLogger                 gateway.ErrorLogger
+	configuration          config.ScrapingPlan
+	laterScrapedRepository repository.CachedScrapedProductsRepository
+	scraperFactory         gateway.ScraperFactory
+	eventBus               utils.EventBus
 }
 
 func NewScraperService(
 	configuration config.ScrapingPlan,
-	productService service.ProductService,
-	cachedScrapedProductService CachedScrapedProductService,
+	laterScrapedRepository repository.CachedScrapedProductsRepository,
 	scraperFactory gateway.ScraperFactory,
-	resultStorage gateway.ResultStorage,
-	metricsPublisher gateway.MetricsPublisher,
-	errorLogger gateway.ErrorLogger,
+	eventBus utils.EventBus,
 ) ScraperService {
 	return &scraperServiceImpl{
-		configuration:               configuration,
-		productService:              productService,
-		cachedScrapedProductService: cachedScrapedProductService,
-		scraperFactory:              scraperFactory,
-		resultStorage:               resultStorage,
-		metricsPublisher:            metricsPublisher,
-		errorLogger:                 errorLogger,
+		configuration:          configuration,
+		laterScrapedRepository: laterScrapedRepository,
+		scraperFactory:         scraperFactory,
+		eventBus:               eventBus,
 	}
 }
 
@@ -66,14 +58,13 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, except
 		totals.add(categoryTotals)
 	}
 
-	s.resultStorage.Save(scrapedProducts, s.categoryNames())
-
-	s.metricsPublisher.Publish(gateway.ScrapingMetrics{
+	s.eventBus.Publish(&config.ScrapingCompleted{
 		Found:   totals.found,
 		Scraped: totals.scraped,
 		New:     totals.new,
 		OnSale:  totals.onSale,
-	}, scrapedProducts)
+		Results: scrapedProducts,
+	})
 
 	return scrapedProducts, nil
 }
@@ -106,7 +97,7 @@ func (s *scraperServiceImpl) scrapeURL(
 ) (*entity.ScrapedProducts, scrapeTotals) {
 	marketplaceName := scraper.GetMarketplaceName()
 
-	cachedProducts, err := s.cachedScrapedProductService.GetCachedScrapedProducts(marketplaceName, category.Category)
+	cachedProducts, err := s.laterScrapedRepository.GetCachedScrapedProducts(marketplaceName, category.Category)
 	if err != nil {
 		cachedProducts = nil
 	}
@@ -143,19 +134,11 @@ func appendScrapedProducts(
 	existing.ScrapedProducts = append(existing.ScrapedProducts, group)
 }
 
-func (s *scraperServiceImpl) categoryNames() []string {
-	names := make([]string, 0, len(s.configuration.Categories))
-	for _, c := range s.configuration.Categories {
-		names = append(names, c.Category)
-	}
-	return names
-}
-
 func countProductsOnSale(products []*entity.ScrapedProduct) int {
 	count := 0
 	for _, p := range products {
 		if p.SpecialPrice() > 0 && p.RegularPrice() < p.SpecialPrice() {
-		count++
+			count++
 		}
 	}
 	return count
