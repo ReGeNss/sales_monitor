@@ -5,45 +5,40 @@ import (
 	"os"
 
 	"sales_monitor/internal/db"
-	statistics_repository "sales_monitor/scraper_app/feature/statistics/data/repository"
-	statisticsEntity "sales_monitor/scraper_app/feature/statistics/domain/entity"
-	notification_repository "sales_monitor/scraper_app/feature/notification/data/repository"
+	"sales_monitor/scraper_app/feature/notification"
 	notificationEntity "sales_monitor/scraper_app/feature/notification/domain/entity"
-	"sales_monitor/scraper_app/feature/product/data/repository"
-	productevent "sales_monitor/scraper_app/feature/product/domain/event"
-	domainservice "sales_monitor/scraper_app/feature/product/domain/service"
-	"sales_monitor/scraper_app/feature/product/service"
-	"sales_monitor/scraper_app/feature/product/service/usecase"
-	scraper_logging "sales_monitor/scraper_app/feature/scraper/data/logging"
-	cached_scraped_product_repository "sales_monitor/scraper_app/feature/scraper/data/repository"
-	scraper_factory "sales_monitor/scraper_app/feature/scraper/data/scraper"
-	storage_repository "sales_monitor/scraper_app/feature/storage/data/repository"
-	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
-	scraperevent "sales_monitor/scraper_app/feature/scraper/domain/event"
-	scraper_service "sales_monitor/scraper_app/feature/scraper/service"
+	"sales_monitor/scraper_app/feature/product"
+	productEvent "sales_monitor/scraper_app/feature/product/domain/event"
+	"sales_monitor/scraper_app/feature/scraper"
+	scraperEntity "sales_monitor/scraper_app/feature/scraper/domain/entity"
+	scraperEvent "sales_monitor/scraper_app/feature/scraper/domain/event"
+	"sales_monitor/scraper_app/feature/statistics"
+	statisticsEntity "sales_monitor/scraper_app/feature/statistics/domain/entity"
+	"sales_monitor/scraper_app/feature/storage"
 	"sales_monitor/scraper_app/utils"
 )
 
-func Run(plan scraper.ScrapingPlan) error {
+func Run(plan scraperEntity.ScrapingPlan) error {
 	db.ConnectToDB()
-
-	cachedScrapedProductService :=
-		cached_scraped_product_repository.NewCachedScrapedProductsRepository(db.GetDB())
-
 	gormDB := db.GetDB()
-	productRepo := repository.NewProductRepository(gormDB)
-	categoryRepo := repository.NewCategoryRepository(gormDB)
-	brandRepo := repository.NewBrandRepository(gormDB)
-	marketplaceRepo := repository.NewMarketplaceRepository(gormDB)
-	priceRepo := repository.NewPriceRepository(gormDB)
-	matcher := domainservice.NewProductMatcher()
 
-	productServiceEventBus := utils.NewEventBus()
+	productEventBus := utils.NewEventBus()
+	scraperEventBus := utils.NewEventBus()
 
-	notificationRepository := notification_repository.NewNotificationRepository(db.GetRedis())
+	notificationRepository := notification.NewNotificationFeature(db.GetRedis())
+	statisticsRepository := statistics.NewStatisticsRepository()
+	resultStorage := storage.NewResultStorage(os.Getenv("SCRAPED_DATA_FOLDER"))
 
-	productServiceEventBus.Subscribe(&productevent.PriceDropDetected{}, func(payload interface{}) {
-		e, ok := payload.(*productevent.PriceDropDetected)
+	productService := product.NewProductService(gormDB, productEventBus)
+
+	scraperService, scraperFactory, err := scraper.NewScraperService(plan, gormDB, scraperEventBus)
+	if err != nil {
+		return err
+	}
+	defer scraperFactory.Close()
+
+	productEventBus.Subscribe(&productEvent.PriceDropDetected{}, func(payload interface{}) {
+		e, ok := payload.(*productEvent.PriceDropDetected)
 		if !ok {
 			log.Printf("unexpected event type for PriceDropDetected handler: %T", payload)
 			return
@@ -66,30 +61,8 @@ func Run(plan scraper.ScrapingPlan) error {
 		}
 	})
 
-	productService := service.NewProductService(
-		usecase.NewResolveCategoryUseCase(categoryRepo),
-		usecase.NewResolveMarketplaceUseCase(marketplaceRepo),
-		usecase.NewAssignBrandsUseCase(brandRepo),
-		usecase.NewResolveBrandUseCase(brandRepo),
-		usecase.NewResolveProductUseCase(productRepo, matcher),
-		usecase.NewRecordPriceUseCase(marketplaceRepo, priceRepo),
-		marketplaceRepo,
-		productServiceEventBus,
-	)
-
-	errorLogger := scraper_logging.NewScreenshotErrorLogger()
-
-	scraperFactory, err := scraper_factory.NewScraperFactory(errorLogger)
-	if err != nil {
-		return err
-	}
-	defer scraperFactory.Close()
-
-	scraperServiceEventBus := utils.NewEventBus()
-
-	statisticsRepository := statistics_repository.NewPrometheusPublisher()
-	scraperServiceEventBus.Subscribe(&scraperevent.ScrapingCompleted{}, func(payload interface{}) {
-		e, ok := payload.(*scraperevent.ScrapingCompleted)
+	scraperEventBus.Subscribe(&scraperEvent.ScrapingCompleted{}, func(payload interface{}) {
+		e, ok := payload.(*scraperEvent.ScrapingCompleted)
 		if !ok {
 			log.Printf("unexpected event type for ScrapingCompleted handler: %T", payload)
 			return
@@ -110,15 +83,6 @@ func Run(plan scraper.ScrapingPlan) error {
 		}
 		statisticsRepository.Publish(statistics)
 	})
-
-	scraperService := scraper_service.NewScraperService(
-		plan,
-		cachedScrapedProductService,
-		scraperFactory,
-		scraperServiceEventBus,
-	)
-
-	resultStorage := storage_repository.NewFileResultStorage(os.Getenv("SCRAPED_DATA_FOLDER"))
 
 	scrapedProducts, err := scraperService.Scrape()
 	if err != nil {
