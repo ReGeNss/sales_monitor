@@ -1,6 +1,6 @@
 package entity
 
-import "sales_monitor/scraper_app/shared/product/domain/entity"
+import "sales_monitor/scraper_app/feature/product/domain/entity"
 
 type ScrapingPlan struct {
 	Categories []ScrapingCategory
@@ -14,8 +14,8 @@ type ScrapingCategory struct {
 }
 
 type ScraperConfig struct {
-	URLs    []string
-	ShopID 	string
+	URLs   []string
+	ShopID string
 }
 
 type LaterScrapedProducts map[string]LaterScrapedProductPrices

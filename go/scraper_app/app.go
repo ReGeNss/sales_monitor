@@ -5,6 +5,12 @@ import (
 	"os"
 
 	"sales_monitor/internal/db"
+	product_gateway "sales_monitor/scraper_app/feature/product/data/gateway"
+	"sales_monitor/scraper_app/feature/product/data/repository"
+	"sales_monitor/scraper_app/feature/product/domain/entity"
+	domainservice "sales_monitor/scraper_app/feature/product/domain/service"
+	"sales_monitor/scraper_app/feature/product/service"
+	"sales_monitor/scraper_app/feature/product/service/usecase"
 	scraper_logging "sales_monitor/scraper_app/feature/scraper/data/logging"
 	scraper_metrics "sales_monitor/scraper_app/feature/scraper/data/metrics"
 	cached_scraped_product_repository "sales_monitor/scraper_app/feature/scraper/data/repository"
@@ -13,12 +19,6 @@ import (
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 	scraper_service "sales_monitor/scraper_app/feature/scraper/service"
-	product_gateway "sales_monitor/scraper_app/shared/product/data/gateway"
-	"sales_monitor/scraper_app/shared/product/data/repository"
-	"sales_monitor/scraper_app/shared/product/domain/entity"
-	domainservice "sales_monitor/scraper_app/shared/product/domain/service"
-	"sales_monitor/scraper_app/shared/product/service"
-	"sales_monitor/scraper_app/shared/product/service/usecase"
 	"sales_monitor/scraper_app/utils"
 )
 

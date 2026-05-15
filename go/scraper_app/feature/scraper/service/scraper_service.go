@@ -2,11 +2,11 @@ package service
 
 import (
 	"fmt"
+	"sales_monitor/scraper_app/feature/product/domain/entity"
 	config "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/domain/exception"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 	"sales_monitor/scraper_app/feature/scraper/domain/repository"
-	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"sales_monitor/scraper_app/utils"
 )
 

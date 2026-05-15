@@ -14,10 +14,10 @@ sales-monitor/
 │   ├── apps/
 │   │   └── api-monitor/   # NestJS REST API
 │   └── packages/
-│       ├── database/      # Shared MikroORM entities
-│       └── common/        # Shared types & utilities
-├── internal/              # Go shared models
-├── migrations/            # Atlas DB migrations (shared)
+│       ├── database/      # feature MikroORM entities
+│       └── common/        # feature types & utilities
+├── internal/              # Go feature models
+├── migrations/            # Atlas DB migrations (feature)
 └── docker-compose.yaml    # Full stack orchestration
 ```
 
@@ -34,7 +34,7 @@ sales-monitor/
 - **Auth**: JWT with Passport.js
 - **Validation**: class-validator
 - **Documentation**: Swagger/OpenAPI
-- **Database**: Shared MariaDB with Go services
+- **Database**: feature MariaDB with Go services
 
 ### Infrastructure
 - **Database**: MariaDB
@@ -81,7 +81,7 @@ Services will be available at:
 npm install
 ```
 
-2. **Build shared packages**:
+2. **Build feature packages**:
 ```bash
 npm run build --workspace=@sales-monitor/database
 npm run build --workspace=@sales-monitor/common
@@ -212,20 +212,20 @@ npm run test:cov -w @sales-monitor/api-monitor
 
 ## Project Structure Details
 
-### Shared Database Package (`@sales-monitor/database`)
+### feature Database Package (`@sales-monitor/database`)
 - Contains all MikroORM entities
-- Shared between multiple Node.js apps
+- feature between multiple Node.js apps
 - Reflects MariaDB schema managed by Atlas
 
-### Shared Common Package (`@sales-monitor/common`)
+### feature Common Package (`@sales-monitor/common`)
 - TypeScript types
 - Utility functions
 - Constants
-- Shared across all Node.js applications
+- feature across all Node.js applications
 
 ### Workspaces Benefits
 - Single `npm install` for all packages
-- Shared dependencies
+- feature dependencies
 - Easy cross-package development
 - Consistent tooling
 
@@ -263,7 +263,7 @@ npm run build:all
 3. Update documentation
 4. Use TypeScript strictly
 5. Add Swagger annotations
-6. Keep shared packages DRY
+6. Keep feature packages DRY
 
 ## License
 

@@ -10,7 +10,7 @@ import (
 	"sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/domain/exception"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
-	scrapingResult "sales_monitor/scraper_app/shared/product/domain/entity"
+	scrapingResult "sales_monitor/scraper_app/feature/product/domain/entity"
 	"strconv"
 	"strings"
 

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	product "sales_monitor/scraper_app/feature/product/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/cache"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/page"
 	"sales_monitor/scraper_app/feature/scraper/domain/entity"
-	product "sales_monitor/scraper_app/shared/product/domain/entity"
 
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 	"strings"

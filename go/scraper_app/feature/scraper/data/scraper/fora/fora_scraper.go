@@ -2,9 +2,9 @@ package fora
 
 import (
 	"log"
+	product "sales_monitor/scraper_app/feature/product/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/cache"
 	"sales_monitor/scraper_app/feature/scraper/data/scraper/helper/page"
-	product "sales_monitor/scraper_app/shared/product/domain/entity"
 
 	"sales_monitor/scraper_app/feature/scraper/domain/entity"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
@@ -81,9 +81,8 @@ func (s *ForaScraper) Scrape(url string, cachedProducts *entity.LaterScrapedProd
 			}
 
 			if err = product.Validate(); err != nil {
-				return 
+				return
 			}
-
 
 			if !inCache {
 				newCount++

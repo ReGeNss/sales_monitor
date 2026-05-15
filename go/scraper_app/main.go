@@ -5,8 +5,8 @@ import (
 	"flag"
 	"log"
 	config "sales_monitor/internal/scheduler_config"
+	"sales_monitor/scraper_app/feature/product/domain/entity"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
-	"sales_monitor/scraper_app/shared/product/domain/entity"
 	"strings"
 
 	"github.com/joho/godotenv"

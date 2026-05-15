@@ -9,11 +9,11 @@ import (
 	"github.com/joho/godotenv"
 
 	"sales_monitor/internal/db"
+	"sales_monitor/scraper_app/feature/product/data/repository"
+	domainservice "sales_monitor/scraper_app/feature/product/domain/service"
+	"sales_monitor/scraper_app/feature/product/service"
+	"sales_monitor/scraper_app/feature/product/service/usecase"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
-	"sales_monitor/scraper_app/shared/product/data/repository"
-	domainservice "sales_monitor/scraper_app/shared/product/domain/service"
-	"sales_monitor/scraper_app/shared/product/service"
-	"sales_monitor/scraper_app/shared/product/service/usecase"
 	"sales_monitor/scraper_app/utils"
 )
 
