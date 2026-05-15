@@ -3,6 +3,7 @@ package service
 import (
 	"log"
 	"sales_monitor/scraper_app/feature/product/domain/entity"
+	"sales_monitor/scraper_app/feature/product/domain/event"
 	"sales_monitor/scraper_app/feature/product/domain/repository"
 	"sales_monitor/scraper_app/feature/product/service/usecase"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
@@ -98,10 +99,10 @@ func (s *productServiceImpl) processBrandGroups(
 		priceDrops := s.processProducts(products, categoryName, brandID, categoryID, marketplaceID, knownURLs, differentiation)
 
 		if len(priceDrops) > 0 {
-			s.eventBus.Publish(&entity.NotificationTask{
+			s.eventBus.Publish(&event.PriceDropDetected{
 				BrandID:   brandID,
 				BrandName: brandName,
-				Products:  priceDrops,
+				Products:  event.NewDroppedProducts(priceDrops),
 			})
 		}
 	}

@@ -31,7 +31,7 @@ func sendNotification(db *gorm.DB, messagingClient *messaging.Client, notificati
 	}
 
 	for _, product := range notificationTask.Products {
-		tokens, err = getTokensWithFavoriteProduct(db, product.ProductID, notificationTask.BrandID)
+		tokens, err = getTokensWithFavoriteProduct(db, product.ID, notificationTask.BrandID)
 		if err != nil {
 			log.Printf("error getting users with favorite product: %v", err)
 		}

@@ -5,9 +5,10 @@ import (
 	"os"
 
 	"sales_monitor/internal/db"
-	product_gateway "sales_monitor/scraper_app/feature/product/data/gateway"
+	notification_repository "sales_monitor/scraper_app/feature/notification/data/repository"
+	notificationEntity "sales_monitor/scraper_app/feature/notification/domain/entity"
 	"sales_monitor/scraper_app/feature/product/data/repository"
-	"sales_monitor/scraper_app/feature/product/domain/entity"
+	productevent "sales_monitor/scraper_app/feature/product/domain/event"
 	domainservice "sales_monitor/scraper_app/feature/product/domain/service"
 	"sales_monitor/scraper_app/feature/product/service"
 	"sales_monitor/scraper_app/feature/product/service/usecase"
@@ -38,14 +39,28 @@ func Run(plan scraper.ScrapingPlan) error {
 
 	productServiceEventBus := utils.NewEventBus()
 
-	productServiceEventBus.Subscribe(&entity.NotificationTask{}, func(payload interface{}) {
-		task, ok := payload.(*entity.NotificationTask)
+	notificationRepository := notification_repository.NewNotificationRepository(db.GetRedis())
+
+	productServiceEventBus.Subscribe(&productevent.PriceDropDetected{}, func(payload interface{}) {
+		e, ok := payload.(*productevent.PriceDropDetected)
 		if !ok {
-			log.Printf("unexpected event type for NotificationTask handler: %T", payload)
+			log.Printf("unexpected event type for PriceDropDetected handler: %T", payload)
 			return
 		}
-		notificationGateway := product_gateway.NewNotificationPublisher(db.GetRedis())
-		if err := notificationGateway.SendNotification(task); err != nil {
+		products := make([]*notificationEntity.Product, 0, len(e.Products))
+		for _, p := range e.Products {
+			products = append(products, &notificationEntity.Product{
+				ID:       p.ID,
+				Name:     p.Name,
+				ImageURL: p.ImageURL,
+			})
+		}
+		task := &notificationEntity.NotificationTask{
+			BrandID:   e.BrandID,
+			BrandName: e.BrandName,
+			Products:  products,
+		}
+		if err := notificationRepository.SendNotification(task); err != nil {
 			log.Printf("could not send notification: %v", err)
 		}
 	})
