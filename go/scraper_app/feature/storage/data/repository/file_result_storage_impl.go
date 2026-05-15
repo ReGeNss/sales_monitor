@@ -1,4 +1,4 @@
-package storage
+package repository
 
 import (
 	"encoding/json"
@@ -6,21 +6,21 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sales_monitor/scraper_app/feature/scraper/domain/entity"
-	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 	"strings"
 	"time"
+
+	"sales_monitor/scraper_app/feature/storage/domain/repository"
 )
 
 type fileResultStorage struct {
 	folder string
 }
 
-func NewFileResultStorage(folder string) gateway.ResultStorage {
+func NewFileResultStorage(folder string) repository.ResultStorageRepository {
 	return &fileResultStorage{folder: folder}
 }
 
-func (s *fileResultStorage) Save(results map[string]*entity.ScrapingResult, categories []string) {
+func (s *fileResultStorage) Save(payload any, categories []string) {
 	filename := fmt.Sprintf("%s/scraped_%s_%s.json",
 		s.folder,
 		strings.Join(categories, " "),
@@ -38,8 +38,8 @@ func (s *fileResultStorage) Save(results map[string]*entity.ScrapingResult, cate
 		return
 	}
 	defer file.Close()
-	err = json.NewEncoder(file).Encode(&results)
-	if err != nil {
+
+	if err := json.NewEncoder(file).Encode(payload); err != nil {
 		log.Printf("could not save scraping result: %v", err)
 	}
 }

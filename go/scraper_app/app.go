@@ -17,7 +17,7 @@ import (
 	scraper_logging "sales_monitor/scraper_app/feature/scraper/data/logging"
 	cached_scraped_product_repository "sales_monitor/scraper_app/feature/scraper/data/repository"
 	scraper_factory "sales_monitor/scraper_app/feature/scraper/data/scraper"
-	scraper_storage "sales_monitor/scraper_app/feature/scraper/data/storage"
+	storage_repository "sales_monitor/scraper_app/feature/storage/data/repository"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
 	scraperevent "sales_monitor/scraper_app/feature/scraper/domain/event"
 	scraper_service "sales_monitor/scraper_app/feature/scraper/service"
@@ -118,7 +118,7 @@ func Run(plan scraper.ScrapingPlan) error {
 		scraperServiceEventBus,
 	)
 
-	resultStorage := scraper_storage.NewFileResultStorage(os.Getenv("SCRAPED_DATA_FOLDER"))
+	resultStorage := storage_repository.NewFileResultStorage(os.Getenv("SCRAPED_DATA_FOLDER"))
 
 	scrapedProducts, err := scraperService.Scrape()
 	if err != nil {
