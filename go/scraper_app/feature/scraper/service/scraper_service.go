@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sales_monitor/scraper_app/feature/product/domain/entity"
 	config "sales_monitor/scraper_app/feature/scraper/domain/entity"
+	"sales_monitor/scraper_app/feature/scraper/domain/event"
 	"sales_monitor/scraper_app/feature/scraper/domain/exception"
 	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
 	"sales_monitor/scraper_app/feature/scraper/domain/repository"
@@ -58,12 +59,12 @@ func (s *scraperServiceImpl) Scrape() (map[string]*config.ScrapingResult, except
 		totals.add(categoryTotals)
 	}
 
-	s.eventBus.Publish(&config.ScrapingCompleted{
+	s.eventBus.Publish(&event.ScrapingCompleted{
 		Found:   totals.found,
 		Scraped: totals.scraped,
 		New:     totals.new,
 		OnSale:  totals.onSale,
-		Results: scrapedProducts,
+		Sample:  event.NewSampleProduct(scrapedProducts),
 	})
 
 	return scrapedProducts, nil

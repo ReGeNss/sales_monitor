@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"sales_monitor/internal/db"
+	statistics_repository "sales_monitor/scraper_app/feature/statistics/data/repository"
+	statisticsEntity "sales_monitor/scraper_app/feature/statistics/domain/entity"
 	notification_repository "sales_monitor/scraper_app/feature/notification/data/repository"
 	notificationEntity "sales_monitor/scraper_app/feature/notification/domain/entity"
 	"sales_monitor/scraper_app/feature/product/data/repository"
@@ -13,12 +15,11 @@ import (
 	"sales_monitor/scraper_app/feature/product/service"
 	"sales_monitor/scraper_app/feature/product/service/usecase"
 	scraper_logging "sales_monitor/scraper_app/feature/scraper/data/logging"
-	scraper_metrics "sales_monitor/scraper_app/feature/scraper/data/metrics"
 	cached_scraped_product_repository "sales_monitor/scraper_app/feature/scraper/data/repository"
 	scraper_factory "sales_monitor/scraper_app/feature/scraper/data/scraper"
 	scraper_storage "sales_monitor/scraper_app/feature/scraper/data/storage"
 	scraper "sales_monitor/scraper_app/feature/scraper/domain/entity"
-	"sales_monitor/scraper_app/feature/scraper/domain/gateway"
+	scraperevent "sales_monitor/scraper_app/feature/scraper/domain/event"
 	scraper_service "sales_monitor/scraper_app/feature/scraper/service"
 	"sales_monitor/scraper_app/utils"
 )
@@ -86,19 +87,28 @@ func Run(plan scraper.ScrapingPlan) error {
 
 	scraperServiceEventBus := utils.NewEventBus()
 
-	metricsPublisher := scraper_metrics.NewPrometheusPublisher()
-	scraperServiceEventBus.Subscribe(&scraper.ScrapingCompleted{}, func(payload interface{}) {
-		event, ok := payload.(*scraper.ScrapingCompleted)
+	statisticsRepository := statistics_repository.NewPrometheusPublisher()
+	scraperServiceEventBus.Subscribe(&scraperevent.ScrapingCompleted{}, func(payload interface{}) {
+		e, ok := payload.(*scraperevent.ScrapingCompleted)
 		if !ok {
-			log.Printf("unexpected event type for ScrapingCompletedEvent handler: %T", payload)
+			log.Printf("unexpected event type for ScrapingCompleted handler: %T", payload)
 			return
 		}
-		metricsPublisher.Publish(gateway.ScrapingMetrics{
-			Found:   event.Found,
-			Scraped: event.Scraped,
-			New:     event.New,
-			OnSale:  event.OnSale,
-		}, event.Results)
+		statistics := &statisticsEntity.ScrapingStatistics{
+			Found:   e.Found,
+			Scraped: e.Scraped,
+			New:     e.New,
+			OnSale:  e.OnSale,
+		}
+		if e.Sample != nil {
+			statistics.Sample = &statisticsEntity.SampleProduct{
+				Name:        e.Sample.Name,
+				Price:       e.Sample.Price,
+				Category:    e.Sample.Category,
+				Marketplace: e.Sample.Marketplace,
+			}
+		}
+		statisticsRepository.Publish(statistics)
 	})
 
 	scraperService := scraper_service.NewScraperService(
